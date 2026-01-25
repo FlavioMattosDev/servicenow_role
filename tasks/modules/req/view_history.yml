@@ -1,0 +1,59 @@
+# tasks/modules/req/view_history.yml
+---
+# Visualizar histórico do pedido
+
+- name: "Validar parâmetros para visualizar histórico"
+  assert:
+    that:
+      - req_sys_id is defined
+    fail_msg: "req_sys_id é obrigatório"
+
+- name: "Obter histórico do Request - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.api_info:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    table: "sys_history_line"
+    query: "tablename=sc_request^documentkey={{ req_sys_id }}"
+    sysparm_display_value: "true"
+    sysparm_fields: "sys_created_on,sys_created_by,fieldname,oldvalue,newvalue"
+    sysparm_order_by: "-sys_created_on"
+    sysparm_limit: "{{ history_limit | default(20) }}"
+  register: req_history
+  no_log: true
+
+- name: "Obter histórico de comentários"
+  servicenow.itsm.api_info:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    table: "sys_journal_field"
+    query: "element_id={{ req_sys_id }}^name=comments"
+    sysparm_display_value: "true"
+    sysparm_fields: "sys_created_on,sys_created_by,value"
+    sysparm_order_by: "-sys_created_on"
+    sysparm_limit: "{{ comment_limit | default(10) }}"
+  register: req_comments_history
+  no_log: true
+
+- name: "Exibir histórico do pedido"
+  debug:
+    msg: |
+      HISTÓRICO DO REQUEST {{ req_sys_id }}:
+
+      Alterações recentes ({{ req_history.records | length }}):
+      {% for record in req_history.records %}
+      {{ record.sys_created_on }} - {{ record.sys_created_by.display_value }}
+      Campo: {{ record.fieldname }}
+      De: {{ record.oldvalue }}
+      Para: {{ record.newvalue }}
+
+      {% endfor %}
+
+      Comentários recentes ({{ req_comments_history.records | length }}):
+      {% for comment in req_comments_history.records %}
+      {{ comment.sys_created_on }} - {{ comment.sys_created_by.display_value }}
+      {{ comment.value }}
+
+      {% endfor %}
+  changed_when: false

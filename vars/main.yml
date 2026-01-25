@@ -1,0 +1,35 @@
+# vars/main.yml
+---
+# Variáveis globais da role
+
+# Configurações de conexão padrão
+servicenow_default_config:
+  api_version: "v1"
+  max_retries: 3
+  retry_delay: 5
+
+# Mapeamento de estados de incidente
+incident_state_mapping:
+  1: "New"
+  2: "In Progress"
+  3: "On Hold"
+  4: "Resolved"
+  5: "Closed"
+  6: "Canceled"
+  7: "Approved"
+
+# Mapeamento de severidade
+incident_severity_mapping:
+  1: "Critical"
+  2: "High"
+  3: "Medium"
+  4: "Low"
+
+# Valores padrão para campos
+default_field_values:
+  active: true
+  notify: 1
+  made_sla: false
+  watch_list: ""
+  upon_reject: "cancel"
+  approval_history: ""

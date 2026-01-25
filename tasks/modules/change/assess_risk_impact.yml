@@ -1,0 +1,54 @@
+# tasks/modules/change/assess_risk_impact.yml
+---
+# Avaliar risco e impacto da Change
+
+- name: "Validar parâmetros para avaliar risco/impacto"
+  assert:
+    that:
+      - change_sys_id is defined
+    fail_msg: "change_sys_id é obrigatório"
+
+- name: "Avaliar risco e impacto da Change - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.change_request:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ change_sys_id }}"
+
+    # Avaliação de risco
+    risk: "{{ change_risk | default(omit) }}"
+    risk_impact_analysis: "{{ change_risk_impact_analysis | default(omit) }}"
+
+    # Avaliação de impacto
+    impact: "{{ change_impact | default(omit) }}"
+    impact_analysis: "{{ change_impact_analysis | default(omit) }}"
+
+    # Justificativa da avaliação
+    justification: "{{ change_justification | default(omit) }}"
+
+    # Mudar estado para autorização se avaliação concluída
+    state: "{{ 'authorize' if change_assessment_complete | default(false) | bool else omit }}"
+
+    # Comentário da avaliação
+    work_notes: "{{ change_work_notes | default('Risco e impacto avaliados via Ansible') }}"
+
+    # Documentos de suporte
+    business_service: "{{ change_business_service | default(omit) }}"
+    cmdb_ci: "{{ change_cmdb_ci | default(omit) }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: change_assess_result
+  no_log: true
+
+- name: "Exibir resultado da avaliação"
+  debug:
+    msg: |
+      Risco e impacto avaliados para Change {{ change_sys_id }}
+      Risco: {{ change_risk | default('Não alterado') }}
+      Impacto: {{ change_impact | default('Não alterado') }}
+      Análise de Risco: {{ 'Fornecida' if change_risk_impact_analysis is defined else 'Não fornecida' }}
+      Alterado: {{ change_assess_result is changed }}
+  changed_when: change_assess_result is changed

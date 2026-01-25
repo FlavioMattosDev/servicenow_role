@@ -1,0 +1,54 @@
+# tasks/modules/incident/associate_ci.yml
+---
+# Associar CI (CMDB) ao incidente
+
+- name: "Validar parâmetros para associar CI"
+  assert:
+    that:
+      - incident_sys_id is defined
+      - incident_cmdb_ci is defined
+    fail_msg: "incident_sys_id e incident_cmdb_ci são obrigatórios"
+
+- name: "Associar CI ao incidente - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.incident:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ incident_sys_id }}"
+
+    # Associar CI
+    cmdb_ci: "{{ incident_cmdb_ci }}"
+
+    # Comentário explicativo
+    work_notes: "{{ incident_work_notes | default('CI ' + incident_cmdb_ci + ' associado ao incidente') }}"
+
+    # Opcional: associar serviço de negócio
+    business_service: "{{ incident_business_service | default(omit) }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: incident_ci_result
+  no_log: true
+
+- name: "Obter informações do CI"
+  servicenow.itsm.api_info:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    table: "cmdb_ci"
+    sys_id: "{{ incident_cmdb_ci }}"
+    sysparm_fields: "name,operational_status,sys_class_name"
+  register: ci_info
+  no_log: true
+
+- name: "Exibir resultado da associação"
+  debug:
+    msg: |
+      CI associado ao incidente {{ incident_sys_id }}
+      CI: {{ ci_info.record.name if ci_info.record is defined else incident_cmdb_ci }}
+      Tipo: {{ ci_info.record.sys_class_name if ci_info.record is defined else 'N/A' }}
+      Status: {{ ci_info.record.operational_status if ci_info.record is defined else 'N/A' }}
+      Alterado: {{ incident_ci_result is changed }}
+  changed_when: incident_ci_result is changed

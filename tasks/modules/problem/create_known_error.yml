@@ -1,0 +1,56 @@
+# tasks/modules/problem/create_known_error.yml
+---
+# Criar Known Error a partir do Problem
+
+- name: "Validar parâmetros para criar Known Error"
+  assert:
+    that:
+      - problem_sys_id is defined
+    fail_msg: "problem_sys_id é obrigatório"
+
+- name: "Criar Known Error - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.problem:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ problem_sys_id }}"
+
+    # Criar Known Error
+    known_error: true
+
+    # Detalhes do Known Error
+    fix_notes: "{{ problem_fix_notes | default('Workaround documentado como Known Error') }}"
+
+    # Mudar estado para Known Error
+    state: "known_error"
+
+    # Comentário explicativo
+    work_notes: "{{ problem_work_notes | default('Known Error criado a partir do Problem') }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: problem_known_error_result
+  no_log: true
+
+- name: "Verificar Known Error criado"
+  servicenow.itsm.api_info:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    table: "problem"
+    sys_id: "{{ problem_sys_id }}"
+    sysparm_fields: "known_error,known_error_date,known_error_id"
+  register: problem_info
+  no_log: true
+
+- name: "Exibir Known Error criado"
+  debug:
+    msg: |
+      Known Error criado para Problem {{ problem_sys_id }}
+      Known Error: {{ problem_info.record.known_error if problem_info.record.known_error is defined else 'N/A' }}
+      Data: {{ problem_info.record.known_error_date if problem_info.record.known_error_date is defined else 'N/A' }}
+      ID: {{ problem_info.record.known_error_id if problem_info.record.known_error_id is defined else 'N/A' }}
+      Alterado: {{ problem_known_error_result is changed }}
+  changed_when: problem_known_error_result is changed

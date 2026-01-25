@@ -1,0 +1,109 @@
+# tasks/modules/api_info/get_work_notes.yml
+---
+# Obter notas de trabalho de um registro
+
+- name: "Validar parâmetros para obter notas de trabalho"
+  assert:
+    that:
+      - api_table is defined
+      - api_sys_id is defined
+    fail_msg: "api_table e api_sys_id são obrigatórios"
+
+- name: "Obter Notas de Trabalho"
+  servicenow.itsm.api_info:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+
+    # Usar tabela de journal para work_notes
+    table: "sys_journal_field"
+    query: "element_id={{ api_sys_id }}^name=work_notes^element=work_notes"
+    sysparm_fields: "sys_created_on,sys_created_by,value"
+    sysparm_order_by: "-sys_created_on"
+    sysparm_limit: "{{ api_work_notes_limit | default(100) }}"
+    sysparm_display_value: "true"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: api_work_notes_result
+  no_log: true
+
+- name: "Processar notas de trabalho"
+  set_fact:
+    api_work_notes: "{{ api_work_notes_result.records }}"
+    api_work_notes_count: "{{ api_work_notes_result.records | length }}"
+    api_work_notes_authors: "{{ api_work_notes_result.records | map(attribute='sys_created_by.display_value') | unique | list }}"
+
+- name: "Exibir resumo das notas de trabalho"
+  debug:
+    msg: |
+      ============================================
+      NOTAS DE TRABALHO DO REGISTRO
+      ============================================
+      Tabela: {{ api_table }}
+      SYS_ID: {{ api_sys_id }}
+      Total de notas: {{ api_work_notes_count }}
+      Autores: {{ api_work_notes_authors | join(', ') }}
+
+      Notas por autor:
+      {% set author_counts = {} %}
+      {% for note in api_work_notes %}
+        {% set author = note.sys_created_by.display_value %}
+        {% if author_counts[author] is defined %}
+          {% set _ = author_counts.update({author: author_counts[author] + 1}) %}
+        {% else %}
+          {% set _ = author_counts.update({author: 1}) %}
+        {% endif %}
+      {% endfor %}
+      {% for author, count in author_counts.items() %}
+      - {{ author }}: {{ count }} notas
+      {% endfor %}
+      ============================================
+  changed_when: false
+
+- name: "Exibir notas de trabalho recentes"
+  debug:
+    msg: |
+      Notas de trabalho recentes ({{ api_display_limit|default(5) }}):
+      {% for note in api_work_notes[0:api_display_limit|default(5)] %}
+      --------------------------------------------
+      Data: {{ note.sys_created_on }}
+      Autor: {{ note.sys_created_by.display_value }}
+
+      {{ note.value }}
+
+      {% endfor %}
+  when: api_work_notes | length > 0
+  changed_when: false
+
+- name: "Extrair ações técnicas das notas"
+  set_fact:
+    api_technical_actions: |
+      {% set actions = [] %}
+      {% set action_keywords = ['executado', 'implementado', 'configurado', 'testado', 'validado', 'atualizado', 'corrigido', 'resolvido', 'aplicado', 'revisado'] %}
+      {% for note in api_work_notes %}
+        {% set text = note.value | lower %}
+        {% for keyword in action_keywords %}
+          {% if keyword in text %}
+            {% set action = {
+              'date': note.sys_created_on,
+              'author': note.sys_created_by.display_value,
+              'action': keyword,
+              'note': note.value[:100] + '...' if note.value|length > 100 else note.value
+            } %}
+            {% set _ = actions.append(action) %}
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
+      {{ actions }}
+
+- name: "Exibir ações técnicas extraídas"
+  debug:
+    msg: |
+      Ações técnicas identificadas ({{ api_technical_actions | length }}):
+      {% for action in api_technical_actions %}
+      - {{ action.date }}: {{ action.author }} {{ action.action }} - {{ action.note }}
+      {% endfor %}
+  when: api_technical_actions | length > 0
+  changed_when: false

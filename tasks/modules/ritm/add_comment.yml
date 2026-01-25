@@ -1,0 +1,37 @@
+# tasks/modules/ritm/add_comment.yml
+---
+# Adicionar comentário ao RITM
+
+- name: "Validar parâmetros para adicionar comentário"
+  assert:
+    that:
+      - ritm_sys_id is defined
+      - ritm_comments is defined
+    fail_msg: "ritm_sys_id e ritm_comments são obrigatórios"
+
+- name: "Adicionar comentário ao Requested Item - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.sc_req_item:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ ritm_sys_id }}"
+
+    # Adicionar comentário
+    comments: "{{ ritm_comments }}"
+
+    # Adicionar nota de trabalho se especificado
+    work_notes: "{{ ritm_work_notes | default(omit) }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: ritm_comment_result
+  no_log: true
+
+- name: "Exibir resultado da adição de comentário"
+  debug:
+    msg: |
+      Comentário adicionado ao Requested Item {{ ritm_sys_id }}
+      Alterado: {{ ritm_comment_result is changed }}
+  changed_when: ritm_comment_result is changed

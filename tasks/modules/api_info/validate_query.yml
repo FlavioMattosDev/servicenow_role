@@ -1,0 +1,104 @@
+# tasks/modules/api_info/validate_query.yml
+---
+# Validar sintaxe de queries
+
+- name: "Validar parâmetros para validação de query"
+  assert:
+    that:
+      - api_table is defined
+      - api_query_to_validate is defined
+    fail_msg: "api_table e api_query_to_validate são obrigatórios"
+
+- name: "Validar Query Syntax"
+  servicenow.itsm.api_info:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+
+    # Parâmetros obrigatórios
+    table: "{{ api_table }}"
+    query: "{{ api_query_to_validate }}"
+
+    # Apenas validação, sem retornar dados
+    sysparm_limit: "0"
+    sysparm_include_count: "false"
+    sysparm_exclude_reference_link: "true"
+
+    # Modo de validação
+    sysparm_display_value: "false"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: api_validation_result
+  ignore_errors: true
+  no_log: true
+
+- name: "Analisar resultado da validação"
+  set_fact:
+    api_query_valid: "{{ api_validation_result is not failed }}"
+    api_validation_error: "{{ api_validation_result.msg if api_validation_result is failed else '' }}"
+    api_validation_success: "{{ 'Query válida' if api_query_valid else 'Query inválida' }}"
+
+- name: "Testar query com execução real (se válida)"
+  servicenow.itsm.api_info:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    table: "{{ api_table }}"
+    query: "{{ api_query_to_validate }}"
+    sysparm_limit: "1"
+    sysparm_fields: "sys_id"
+  register: api_test_result
+  no_log: true
+  when: api_query_valid and api_test_execution | default(true) | bool
+
+- name: "Exibir resultado da validação"
+  debug:
+    msg: |
+      ============================================
+      VALIDAÇÃO DE QUERY
+      ============================================
+      Tabela: {{ api_table }}
+      Query: {{ api_query_to_validate }}
+
+      Resultado: {{ api_validation_success }}
+
+      {% if api_query_valid %}
+      Status: ✅ QUERY VÁLIDA
+      {% if api_test_result is defined %}
+      Teste executado: Sim
+      Registros encontrados: {{ api_test_result.records | length }}
+      {% endif %}
+
+      Dicas:
+      - Use ^ para AND
+      - Use ^OR para OR
+      - Use ^NQ para NOT
+      - Use ^ORDERBY para ordenação
+      - Use ^GROUPBY para agrupamento
+
+      Exemplos válidos:
+      - active=true^priority=1
+      - state=1^ORstate=2
+      - short_descriptionLIKEserver
+      - sys_created_on>=javascript:gs.beginningOfLastMonth()
+
+      {% else %}
+      Status: ❌ QUERY INVÁLIDA
+      Erro: {{ api_validation_error }}
+
+      Problemas comuns:
+      1. Operadores inválidos
+      2. Campos inexistentes
+      3. Valores fora do formato esperado
+      4. Parênteses desbalanceados
+      5. Strings sem aspas quando necessário
+
+      Sugestões:
+      - Verifique a grafia dos campos
+      - Use sysparm_query para queries complexas
+      - Consulte o schema da tabela
+      {% endif %}
+      ============================================
+  changed_when: false

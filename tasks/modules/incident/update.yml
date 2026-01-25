@@ -1,0 +1,60 @@
+# tasks/modules/incident/update.yml
+---
+# Atualizar Incidente
+
+- name: "Validar parâmetros para atualizar incidente"
+  assert:
+    that:
+      - incident_sys_id is defined
+    fail_msg: "incident_sys_id é obrigatório para atualizar incidente"
+
+- name: "Atualizar Incidente - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.incident:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ incident_sys_id }}"
+
+    # Campos atualizáveis
+    short_description: "{{ incident_short_description | default(omit) }}"
+    description: "{{ incident_description | default(omit) }}"
+    caller_id: "{{ incident_caller | default(omit) }}"
+
+    # Impacto, urgência e prioridade
+    impact: "{{ incident_impact | default(omit) }}"
+    urgency: "{{ incident_urgency | default(omit) }}"
+    priority: "{{ incident_priority | default(omit) }}"
+
+    # Categorização
+    category: "{{ incident_category | default(omit) }}"
+    subcategory: "{{ incident_subcategory | default(omit) }}"
+
+    # Atribuição
+    assignment_group: "{{ incident_assignment_group | default(omit) }}"
+    assigned_to: "{{ incident_assigned_to | default(omit) }}"
+
+    # Configuração Item
+    cmdb_ci: "{{ incident_cmdb_ci | default(omit) }}"
+
+    # Estado
+    state: "{{ incident_state | default(omit) }}"
+
+    # Campos de negócio
+    business_service: "{{ incident_business_service | default(omit) }}"
+
+    # Outros campos
+    "{{ incident_other_fields | default({}) }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: incident_update_result
+  no_log: true
+
+- name: "Exibir resultado da atualização"
+  debug:
+    msg: |
+      Incidente {{ incident_sys_id }} atualizado
+      Alterado: {{ incident_update_result is changed }}
+  changed_when: incident_update_result is changed

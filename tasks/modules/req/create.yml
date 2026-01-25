@@ -1,0 +1,59 @@
+# tasks/modules/req/create.yml
+---
+# Criar Request (via Service Catalog)
+
+- name: "Validar parâmetros para criar Request"
+  assert:
+    that:
+      - req_requested_for is defined
+    fail_msg: "req_requested_for (solicitante) é obrigatório para criar Request"
+
+- name: "Criar Request via Service Catalog - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.sc_request:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+
+    # Solicitante obrigatório
+    requested_for: "{{ req_requested_for }}"
+
+    # Campos adicionais
+    short_description: "{{ req_short_description | default('Request criado via Ansible') }}"
+    description: "{{ req_description | default('') }}"
+
+    # Urgência e impacto
+    urgency: "{{ req_urgency | default(3) }}"
+    impact: "{{ req_impact | default(3) }}"
+
+    # Categoria
+    category: "{{ req_category | default(omit) }}"
+    subcategory: "{{ req_subcategory | default(omit) }}"
+
+    # Configurações de aprovação
+    approval: "{{ req_approval | default('not requested') }}"
+
+    # Solicitação por
+    requested_by: "{{ req_requested_by | default(req_requested_for) }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: req_create_result
+  no_log: true
+
+- name: "Registrar SYS_ID do Request criado"
+  set_fact:
+    created_req_sys_id: "{{ req_create_result.record.sys_id }}"
+    created_req_number: "{{ req_create_result.record.number }}"
+  when: req_create_result is changed
+
+- name: "Exibir resultado da criação"
+  debug:
+    msg: |
+      Request criado com sucesso!
+      Número: {{ req_create_result.record.number }}
+      SYS_ID: {{ req_create_result.record.sys_id }}
+      Solicitante: {{ req_create_result.record.requested_for.display_value if req_create_result.record.requested_for is defined else 'N/A' }}
+      Estado: {{ req_create_result.record.stage if req_create_result.record.stage is defined else 'N/A' }}
+  when: req_create_result is changed

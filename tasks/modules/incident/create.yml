@@ -1,0 +1,72 @@
+# tasks/modules/incident/create.yml
+---
+# Criar Incidente
+
+- name: "Validar parâmetros para criar incidente"
+  assert:
+    that:
+      - incident_short_description is defined
+    fail_msg: "incident_short_description é obrigatório para criar incidente"
+
+- name: "Criar Incidente - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.incident:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+
+    # Campos obrigatórios
+    short_description: "{{ incident_short_description }}"
+
+    # Campos opcionais
+    description: "{{ incident_description | default('') }}"
+    caller_id: "{{ incident_caller | default(omit) }}"
+    contact_type: "{{ incident_contact_type | default('email') }}"
+
+    # Impacto, urgência e prioridade
+    impact: "{{ incident_impact | default(3) }}"
+    urgency: "{{ incident_urgency | default(3) }}"
+    priority: "{{ incident_priority | default(3) }}"
+
+    # Categorização
+    category: "{{ incident_category | default(omit) }}"
+    subcategory: "{{ incident_subcategory | default(omit) }}"
+
+    # Atribuição inicial
+    assignment_group: "{{ incident_assignment_group | default(omit) }}"
+    assigned_to: "{{ incident_assigned_to | default(omit) }}"
+
+    # Configuração Item
+    cmdb_ci: "{{ incident_cmdb_ci | default(omit) }}"
+
+    # Estado inicial
+    state: "{{ incident_state | default(1) }}"
+
+    # Comentários iniciais
+    comments: "{{ incident_comments | default('Incidente criado via Ansible') }}"
+    work_notes: "{{ incident_work_notes | default('') }}"
+
+    # Campos de negócio
+    business_service: "{{ incident_business_service | default(omit) }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: incident_create_result
+  no_log: true
+
+- name: "Registrar SYS_ID do incidente criado"
+  set_fact:
+    created_incident_sys_id: "{{ incident_create_result.record.sys_id }}"
+    created_incident_number: "{{ incident_create_result.record.number }}"
+  when: incident_create_result is changed
+
+- name: "Exibir resultado da criação"
+  debug:
+    msg: |
+      Incidente criado com sucesso!
+      Número: {{ incident_create_result.record.number }}
+      SYS_ID: {{ incident_create_result.record.sys_id }}
+      Prioridade: {{ incident_create_result.record.priority }}
+      Estado: {{ incident_create_result.record.state }}
+  when: incident_create_result is changed

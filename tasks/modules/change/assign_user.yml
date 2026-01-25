@@ -1,0 +1,43 @@
+# tasks/modules/change/assign_user.yml
+---
+# Atribuir Change a um usuário
+
+- name: "Validar parâmetros para atribuição a usuário"
+  assert:
+    that:
+      - change_sys_id is defined
+      - change_assigned_to is defined
+    fail_msg: "change_sys_id e change_assigned_to são obrigatórios"
+
+- name: "Atribuir Change para usuário - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.change_request:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ change_sys_id }}"
+
+    # Atribuir ao usuário
+    assigned_to: "{{ change_assigned_to }}"
+
+    # Remover atribuição de grupo se existir
+    assignment_group: ""
+
+    # Mudar estado para avaliação
+    state: "{{ change_new_state | default('assess') }}"
+
+    # Comentário automático
+    work_notes: "{{ change_work_notes | default('Change atribuída para ' + change_assigned_to) }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: change_assign_result
+  no_log: true
+
+- name: "Exibir resultado da atribuição"
+  debug:
+    msg: |
+      Change {{ change_sys_id }} atribuída para {{ change_assigned_to }}
+      Alterado: {{ change_assign_result is changed }}
+  changed_when: change_assign_result is changed

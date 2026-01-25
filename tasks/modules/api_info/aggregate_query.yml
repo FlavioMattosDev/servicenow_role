@@ -1,0 +1,101 @@
+# tasks/modules/api_info/aggregate_query.yml
+---
+# Consultas agregadas com funções de agregação
+
+- name: "Validar parâmetros para consulta agregada"
+  assert:
+    that:
+      - api_table is defined
+      - api_aggregate_fields is defined
+    fail_msg: "api_table e api_aggregate_fields são obrigatórios"
+
+- name: "Executar Consulta Agregada"
+  servicenow.itsm.api_info:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+
+    # Parâmetros obrigatórios
+    table: "{{ api_table }}"
+
+    # Parâmetros de consulta
+    query: "{{ api_query | default(omit) }}"
+
+    # Campos para agregação
+    sysparm_fields: "{{ api_aggregate_fields }}"
+
+    # Funções de agregação
+    sysparm_avg_fields: "{{ api_avg_fields | default(omit) }}"
+    sysparm_sum_fields: "{{ api_sum_fields | default(omit) }}"
+    sysparm_min_fields: "{{ api_min_fields | default(omit) }}"
+    sysparm_max_fields: "{{ api_max_fields | default(omit) }}"
+    sysparm_count: "{{ api_count | default('true') }}"
+
+    # Agrupamento
+    sysparm_group_by: "{{ api_group_by | default(omit) }}"
+
+    # Ordenação de resultados agregados
+    sysparm_order_by: "{{ api_order_by | default(omit) }}"
+
+    # Limite
+    sysparm_limit: "{{ api_limit | default(100) }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: api_aggregate_result
+  no_log: true
+
+- name: "Processar resultados agregados"
+  set_fact:
+    api_aggregate_data: "{{ api_aggregate_result.records | default([]) }}"
+    api_aggregate_count: "{{ api_aggregate_result.records | default([]) | length }}"
+    api_aggregate_stats: "{{ api_aggregate_result.stats | default({}) }}"
+
+- name: "Exibir resumo da agregação"
+  debug:
+    msg: |
+      ============================================
+      CONSULTA AGREGADA - RESUMO
+      ============================================
+      Tabela: {{ api_table }}
+      Filtro: {{ api_query | default('Nenhum') }}
+      Total de grupos: {{ api_aggregate_count }}
+
+      Campos agregados:
+      - Média: {{ api_avg_fields | default('Nenhum') }}
+      - Soma: {{ api_sum_fields | default('Nenhum') }}
+      - Mínimo: {{ api_min_fields | default('Nenhum') }}
+      - Máximo: {{ api_max_fields | default('Nenhum') }}
+
+      {% if api_group_by is defined %}
+      Agrupamento: {{ api_group_by }}
+      {% endif %}
+      ============================================
+  changed_when: false
+
+- name: "Exibir estatísticas gerais"
+  debug:
+    msg: |
+      Estatísticas gerais:
+      {% if api_aggregate_stats is mapping %}
+        {% for key, value in api_aggregate_stats.items() %}
+      - {{ key }}: {{ value }}
+        {% endfor %}
+      {% else %}
+      Nenhuma estatística disponível
+      {% endif %}
+  changed_when: false
+
+- name: "Exibir resultados da agregação"
+  debug:
+    msg: |
+      Resultados da agregação ({{ api_display_limit|default(5) }} primeiros):
+      {% for record in api_aggregate_data[0:api_display_limit|default(5)] %}
+      Registro {{ loop.index }}:
+        {% for key, value in record.items() %}
+        - {{ key }}: {{ value }}
+        {% endfor %}
+      {% endfor %}
+  when: api_aggregate_data | length > 0
+  changed_when: false

@@ -1,0 +1,28 @@
+# tasks/dispatcher/main.yml
+---
+# Dispatcher inteligente para roteamento de operações
+
+- name: "Carregar mapeamento de operações"
+  include_vars:
+    file: "{{ role_path }}/defaults/module_dispatcher.yml"
+    name: module_mapping
+
+- name: "Validar módulo e operação suportados"
+  assert:
+    that:
+      - servicenow_module in module_mapping.servicenow_module_operations.keys()
+      - servicenow_operation in module_mapping.servicenow_module_operations[servicenow_module]
+    success_msg: "Módulo '{{ servicenow_module }}' e operação '{{ servicenow_operation }}' são suportados"
+    fail_msg: |
+      Combinação não suportada: módulo='{{ servicenow_module }}', operação='{{ servicenow_operation }}'
+      Módulos suportados: {{ module_mapping.servicenow_module_operations.keys() | list }}
+      Operações para {{ servicenow_module }}: {{ module_mapping.servicenow_module_operations[servicenow_module] }}
+
+- name: "Rotear para operação específica do módulo"
+  include_tasks: "modules/{{ servicenow_module }}/{{ servicenow_operation }}.yml"
+  vars:
+    # Passar parâmetros específicos do módulo
+    "{{ servicenow_module }}_params": "{{ lookup('vars', servicenow_module + '_params', default={}) }}"
+
+- name: "Notificar conclusão da operação"
+  meta: flush_handlers

@@ -1,0 +1,50 @@
+# tasks/modules/ritm/change_status.yml
+---
+# Atualizar status do RITM
+
+- name: "Validar parâmetros para mudança de status"
+  assert:
+    that:
+      - ritm_sys_id is defined
+      - ritm_new_stage is defined
+    fail_msg: "ritm_sys_id e ritm_new_stage são obrigatórios"
+
+- name: "Validar estágios permitidos"
+  assert:
+    that:
+      - ritm_new_stage in ['requested', 'approved', 'fulfillment', 'received', 'closed_complete', 'closed_incomplete', 'cancelled']
+    fail_msg: "Estágio '{{ ritm_new_stage }}' inválido. Use: requested, approved, fulfillment, received, closed_complete, closed_incomplete, cancelled"
+
+- name: "Atualizar estágio do Requested Item - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.sc_req_item:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ ritm_sys_id }}"
+
+    # Mudar estágio
+    stage: "{{ ritm_new_stage }}"
+
+    # Se estiver fechando, atualizar estado também
+    state: "{{ 'closed' if ritm_new_stage in ['closed_complete', 'closed_incomplete', 'cancelled'] else omit }}"
+
+    # Campos para fechamento
+    close_code: "{{ ritm_close_code | default(omit) }}"
+    close_notes: "{{ ritm_close_notes | default(omit) }}"
+
+    # Comentário automático
+    work_notes: "{{ ritm_work_notes | default('Estágio alterado para ' + ritm_new_stage) }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: ritm_stage_result
+  no_log: true
+
+- name: "Exibir resultado da mudança de estágio"
+  debug:
+    msg: |
+      Requested Item {{ ritm_sys_id }} estágio alterado para {{ ritm_new_stage }}
+      Alterado: {{ ritm_stage_result is changed }}
+  changed_when: ritm_stage_result is changed

@@ -1,0 +1,37 @@
+# tasks/modules/problem/add_work_note.yml
+---
+# Adicionar nota de trabalho ao Problem
+
+- name: "Validar parâmetros para adicionar nota de trabalho"
+  assert:
+    that:
+      - problem_sys_id is defined
+      - problem_work_notes is defined
+    fail_msg: "problem_sys_id e problem_work_notes são obrigatórios"
+
+- name: "Adicionar nota de trabalho ao Problem - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.problem:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ problem_sys_id }}"
+
+    # Adicionar nota de trabalho
+    work_notes: "{{ problem_work_notes }}"
+
+    # Adicionar comentário se especificado
+    comments: "{{ problem_comments | default(omit) }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: problem_work_note_result
+  no_log: true
+
+- name: "Exibir resultado da adição de nota de trabalho"
+  debug:
+    msg: |
+      Nota de trabalho adicionada ao Problem {{ problem_sys_id }}
+      Alterado: {{ problem_work_note_result is changed }}
+  changed_when: problem_work_note_result is changed

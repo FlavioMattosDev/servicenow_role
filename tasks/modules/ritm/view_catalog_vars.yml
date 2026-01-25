@@ -1,0 +1,39 @@
+# tasks/modules/ritm/view_catalog_vars.yml
+---
+# Visualizar variáveis do catálogo do RITM
+
+- name: "Validar parâmetros para visualizar variáveis"
+  assert:
+    that:
+      - ritm_sys_id is defined
+    fail_msg: "ritm_sys_id é obrigatório"
+
+- name: "Obter informações detalhadas do RITM - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.api_info:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    table: "sc_req_item"
+    sys_id: "{{ ritm_sys_id }}"
+    sysparm_display_value: "true"
+    sysparm_fields: "variables,cat_item,cat_item.description,short_description,quantity,request"
+  register: ritm_details
+  no_log: true
+
+- name: "Exibir variáveis do catálogo"
+  debug:
+    msg: |
+      Variáveis do catálogo para RITM {{ ritm_sys_id }}:
+
+      Item do Catálogo: {{ ritm_details.record.cat_item.display_value }}
+      Descrição: {{ ritm_details.record.cat_item.description if ritm_details.record.cat_item.description is defined else 'N/A' }}
+
+      Variáveis:
+      {% if ritm_details.record.variables %}
+        {% for key, value in ritm_details.record.variables.items() %}
+        - {{ key }}: {{ value }}
+        {% endfor %}
+      {% else %}
+        Nenhuma variável definida
+      {% endif %}
+  changed_when: false

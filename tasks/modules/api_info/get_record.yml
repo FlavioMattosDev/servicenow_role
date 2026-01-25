@@ -1,0 +1,94 @@
+# tasks/modules/api_info/get_record.yml
+---
+# Obter um registro específico por SYS_ID
+
+- name: "Validar parâmetros para obter registro"
+  assert:
+    that:
+      - api_table is defined
+      - api_sys_id is defined
+    fail_msg: "api_table e api_sys_id são obrigatórios para obter um registro"
+
+- name: "Obter Registro Específico - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.api_info:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+
+    # Parâmetros obrigatórios
+    table: "{{ api_table }}"
+    sys_id: "{{ api_sys_id }}"
+
+    # Controle de exibição
+    sysparm_display_value: "{{ api_sysparm_display_value | default('true') }}"
+    sysparm_exclude_reference_link: "{{ api_sysparm_exclude_reference_link | default('false') }}"
+
+    # Colunas específicas
+    columns: "{{ api_columns | default(omit) }}"
+    sysparm_fields: "{{ api_sysparm_fields | default(omit) }}"
+
+    # Incluir campos de relacionamento
+    sysparm_include_count: "{{ api_sysparm_include_count | default('false') }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: api_get_record_result
+  no_log: true
+
+- name: "Validar se registro foi encontrado"
+  assert:
+    that:
+      - api_get_record_result.record is defined
+    fail_msg: "Registro não encontrado na tabela '{{ api_table }}' com SYS_ID '{{ api_sys_id }}'"
+
+- name: "Registrar informações do registro"
+  set_fact:
+    api_record_data: "{{ api_get_record_result.record }}"
+    api_record_number: "{{ api_get_record_result.record.number | default('N/A') }}"
+    api_record_sys_id: "{{ api_get_record_result.record.sys_id | default('N/A') }}"
+    api_record_short_description: "{{ api_get_record_result.record.short_description | default('N/A') }}"
+    api_record_state: "{{ api_get_record_result.record.state | default('N/A') }}"
+    api_record_created: "{{ api_get_record_result.record.sys_created_on | default('N/A') }}"
+    api_record_updated: "{{ api_get_record_result.record.sys_updated_on | default('N/A') }}"
+
+- name: "Exibir informações do registro"
+  debug:
+    msg: |
+      ============================================
+      REGISTRO OBTIDO - DETALHES
+      ============================================
+      Tabela: {{ api_table }}
+      SYS_ID: {{ api_record_sys_id }}
+      Número: {{ api_record_number }}
+
+      Informações básicas:
+      - Descrição curta: {{ api_record_short_description }}
+      - Estado: {{ api_record_state }}
+      - Criado em: {{ api_record_created }}
+      - Atualizado em: {{ api_record_updated }}
+
+      Campos disponíveis ({{ api_get_record_result.record.keys() | list | length }}):
+      {% for key in api_get_record_result.record.keys() | sort %}
+        - {{ key }}
+      {% endfor %}
+      ============================================
+  changed_when: false
+
+- name: "Exibir valores dos campos solicitados"
+  debug:
+    msg: |
+      Valores dos campos solicitados:
+      {% if api_columns is defined %}
+        {% set columns_list = api_columns.split(',') %}
+        {% for column in columns_list %}
+          {{ column.strip() }}: {{ api_get_record_result.record[column.strip()] | default('N/A') }}
+        {% endfor %}
+      {% elif api_sysparm_fields is defined %}
+        {% set fields_list = api_sysparm_fields.split(',') %}
+        {% for field in fields_list %}
+          {{ field.strip() }}: {{ api_get_record_result.record[field.strip()] | default('N/A') }}
+        {% endfor %}
+      {% endif %}
+  when: api_columns is defined or api_sysparm_fields is defined
+  changed_when: false

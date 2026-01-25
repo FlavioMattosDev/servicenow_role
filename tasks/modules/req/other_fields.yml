@@ -1,0 +1,38 @@
+# tasks/modules/req/other_fields.yml
+---
+# Gerenciar outros campos do Request
+
+- name: "Validar parâmetros para outros campos"
+  assert:
+    that:
+      - req_sys_id is defined
+      - req_other_fields is defined
+    fail_msg: "req_sys_id e req_other_fields são obrigatórios"
+
+- name: "Atualizar outros campos do Request - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.sc_request:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ req_sys_id }}"
+
+    # Campos dinâmicos
+    "{{ req_other_fields }}"
+
+    # Adicionar nota de trabalho sobre a atualização
+    work_notes: "{{ req_work_notes | default('Campos adicionais atualizados via Ansible') }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: req_other_fields_result
+  no_log: true
+
+- name: "Exibir resultado da atualização de outros campos"
+  debug:
+    msg: |
+      Outros campos do Request {{ req_sys_id }} atualizados
+      Campos modificados: {{ req_other_fields.keys() | list }}
+      Alterado: {{ req_other_fields_result is changed }}
+  changed_when: req_other_fields_result is changed

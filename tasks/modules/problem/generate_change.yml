@@ -1,0 +1,79 @@
+# tasks/modules/problem/generate_change.yml
+---
+# Gerar Change a partir do Problem
+
+- name: "Validar parâmetros para gerar Change"
+  assert:
+    that:
+      - problem_sys_id is defined
+    fail_msg: "problem_sys_id é obrigatório"
+
+- name: "Obter informações do Problem"
+  servicenow.itsm.api_info:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    table: "problem"
+    sys_id: "{{ problem_sys_id }}"
+    sysparm_fields: "short_description,description,cmdb_ci,assignment_group"
+  register: problem_info
+  no_log: true
+
+- name: "Gerar Change Request - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.change_request:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+
+    # Criar Change baseado no Problem
+    short_description: "{{ change_short_description | default('Change para resolver: ' + problem_info.record.short_description) }}"
+    description: "{{ change_description | default(problem_info.record.description) }}"
+
+    # Relacionar com Problem
+    problem_id: "{{ problem_sys_id }}"
+
+    # Configurações da Change
+    type: "{{ change_type | default('normal') }}"
+    category: "{{ change_category | default('software') }}"
+    risk: "{{ change_risk | default('medium') }}"
+    impact: "{{ change_impact | default('medium') }}"
+
+    # CI relacionado
+    cmdb_ci: "{{ change_cmdb_ci | default(problem_info.record.cmdb_ci) }}"
+
+    # Atribuição
+    assignment_group: "{{ change_assignment_group | default(problem_info.record.assignment_group) }}"
+
+    # Justificativa
+    justification: "{{ change_justification | default('Change gerada automaticamente a partir do Problem ' + problem_sys_id) }}"
+
+    # Planejamento
+    start_date: "{{ change_start_date | default(omit) }}"
+    end_date: "{{ change_end_date | default(omit) }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: problem_generate_change_result
+  no_log: true
+
+- name: "Atualizar Problem com referência à Change"
+  servicenow.itsm.problem:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ problem_sys_id }}"
+    work_notes: "Change {{ problem_generate_change_result.record.number if problem_generate_change_result is changed else 'N/A' }} gerada para resolver este Problem"
+  when: problem_generate_change_result is changed
+  no_log: true
+
+- name: "Exibir Change gerada"
+  debug:
+    msg: |
+      Change gerada para Problem {{ problem_sys_id }}
+      Change Number: {{ problem_generate_change_result.record.number if problem_generate_change_result is changed else 'Erro ao gerar Change' }}
+      SYS_ID: {{ problem_generate_change_result.record.sys_id if problem_generate_change_result is changed else 'N/A' }}
+      Tipo: {{ problem_generate_change_result.record.type if problem_generate_change_result is changed else 'N/A' }}
+  changed_when: problem_generate_change_result is changed

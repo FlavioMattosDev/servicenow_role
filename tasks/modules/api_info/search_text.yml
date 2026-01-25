@@ -1,0 +1,137 @@
+# tasks/modules/api_info/search_text.yml
+---
+# Busca textual em múltiplos campos
+
+- name: "Validar parâmetros para busca textual"
+  assert:
+    that:
+      - api_table is defined
+      - api_search_text is defined
+    fail_msg: "api_table e api_search_text são obrigatórios"
+
+- name: "Determinar campos pesquisáveis"
+  servicenow.itsm.api_info:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    table: "sys_dictionary"
+    query: "name={{ api_table }}^(internal_type=string^ORinternal_type=journal^ORinternal_type=html^ORinternal_type=email^ORinternal_type=url^ORinternal_type=phone)"
+    sysparm_fields: "element,internal_type"
+    sysparm_limit: 50
+  register: api_searchable_fields
+  no_log: true
+
+- name: "Construir query de busca textual"
+  set_fact:
+    api_search_query: |
+      {% set search_terms = api_search_text.split() %}
+      {% set queries = [] %}
+      {% for field in api_searchable_fields.records %}
+        {% set field_name = field.element %}
+        {% for term in search_terms %}
+          {% if term|length >= api_min_term_length|default(3) %}
+            {% set _ = queries.append(field_name + 'LIKE' + term) %}
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
+      {{ queries | join('^OR') }}
+
+- name: "Executar busca textual"
+  servicenow.itsm.api_info:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    table: "{{ api_table }}"
+    query: "{{ api_search_query }}"
+    sysparm_fields: "{{ api_search_fields | default('sys_id,number,short_description') }}"
+    sysparm_limit: "{{ api_search_limit | default(50) }}"
+    sysparm_order_by: "{{ api_search_order | default('sys_updated_onDESC') }}"
+    sysparm_display_value: "true"
+  register: api_search_result
+  no_log: true
+
+- name: "Processar resultados da busca"
+  set_fact:
+    api_search_results: "{{ api_search_result.records }}"
+    api_search_count: "{{ api_search_result.records | length }}"
+    api_search_fields_used: "{{ api_searchable_fields.records | map(attribute='element') | list }}"
+
+- name: "Exibir resumo da busca"
+  debug:
+    msg: |
+      ============================================
+      BUSCA TEXTUAL - RESUMO
+      ============================================
+      Tabela: {{ api_table }}
+      Texto buscado: "{{ api_search_text }}"
+      Resultados encontrados: {{ api_search_count }}
+
+      Campos pesquisados ({{ api_search_fields_used | length }}):
+      {% for field in api_search_fields_used[0:10] %}
+      - {{ field }}
+      {% endfor %}
+      {% if api_search_fields_used | length > 10 %}
+        ... e mais {{ api_search_fields_used | length - 10 }} campos
+      {% endif %}
+
+      Query gerada: {{ api_search_query | default('N/A') }}
+      ============================================
+  changed_when: false
+
+- name: "Exibir resultados da busca"
+  debug:
+    msg: |
+      Resultados da busca ({{ api_display_limit|default(10) }} primeiros):
+      {% for result in api_search_results[0:api_display_limit|default(10)] %}
+      {{ loop.index }}. {{ result.number | default(result.sys_id) }}: {{ result.short_description | default('Sem descrição') }}
+        - SYS_ID: {{ result.sys_id }}
+        - Última atualização: {{ result.sys_updated_on | default('N/A') }}
+      {% endfor %}
+
+      {% if api_search_results | length > api_display_limit|default(10) %}
+        ... e mais {{ api_search_results | length - api_display_limit|default(10) }} resultados
+      {% endif %}
+  when: api_search_results | length > 0
+  changed_when: false
+
+- name: "Busca avançada com relevância (se habilitado)"
+  set_fact:
+    api_relevance_scores: |
+      {% set scored_results = [] %}
+      {% set search_terms = api_search_text.lower().split() %}
+      {% for record in api_search_results %}
+        {% set score = 0 %}
+        {% for field, value in record.items() %}
+          {% if value is string %}
+            {% set value_lower = value.lower() %}
+            {% for term in search_terms %}
+              {% if term in value_lower %}
+                {% set score = score + 1 %}
+                {% if field in ['short_description', 'description'] %}
+                  {% set score = score + 2 %}  # Peso extra para campos importantes
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+        {% endfor %}
+        {% if score > 0 %}
+          {% set _ = scored_results.append({
+            'record': record,
+            'score': score,
+            'relevance': (score / (search_terms|length * 3) * 100) | round(2)
+          }) %}
+        {% endif %}
+      {% endfor %}
+      {{ scored_results | sort(attribute='score', reverse=true) }}
+
+- name: "Exibir resultados por relevância"
+  debug:
+    msg: |
+      Resultados ordenados por relevância:
+      {% for item in api_relevance_scores[0:api_display_limit|default(5)] %}
+      {{ loop.index }}. [{{ item.relevance }}%] {{ item.record.number | default(item.record.sys_id) }}: {{ item.record.short_description | default('Sem descrição') }}
+      {% endfor %}
+  when:
+    - api_advanced_search | default(false) | bool
+    - api_relevance_scores | length > 0
+  changed_when: false

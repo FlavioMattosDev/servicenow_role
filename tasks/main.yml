@@ -1,0 +1,33 @@
+# tasks/main.yml
+---
+# Ponto de entrada principal da role
+
+- name: "Validar parâmetros obrigatórios"
+  assert:
+    that:
+      - servicenow_module is defined
+      - servicenow_action is defined
+    success_msg: "Parâmetros validados com sucesso"
+    fail_msg: "Parâmetros obrigatórios não fornecidos: servicenow_module e servicenow_action"
+
+- name: "Carregar credenciais do ServiceNow"
+  include_vars:
+    file: "{{ role_path }}/vars/credentials.yml"
+    name: servicenow_creds
+
+- name: "Carregar variáveis globais"
+  include_vars:
+    file: "{{ role_path }}/vars/main.yml"
+    name: servicenow_globals
+
+- name: "Carregar configurações de módulo"
+  include_vars:
+    file: "{{ role_path }}/vars/module_parameters/{{ servicenow_module }}.yml"
+    name: module_params
+  ignore_errors: true
+  when: servicenow_module != 'api_info'
+
+- name: "Executar dispatcher principal"
+  include_tasks: dispatcher/main.yml
+  vars:
+    servicenow_operation: "{{ servicenow_action }}"

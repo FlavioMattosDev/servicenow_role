@@ -1,0 +1,37 @@
+# tasks/modules/req/add_comment.yml
+---
+# Adicionar comentário ao Request
+
+- name: "Validar parâmetros para adicionar comentário"
+  assert:
+    that:
+      - req_sys_id is defined
+      - req_comments is defined
+    fail_msg: "req_sys_id e req_comments são obrigatórios"
+
+- name: "Adicionar comentário ao Request - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.sc_request:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ req_sys_id }}"
+
+    # Adicionar comentário
+    comments: "{{ req_comments }}"
+
+    # Adicionar nota de trabalho se especificado
+    work_notes: "{{ req_work_notes | default(omit) }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: req_comment_result
+  no_log: true
+
+- name: "Exibir resultado da adição de comentário"
+  debug:
+    msg: |
+      Comentário adicionado ao Request {{ req_sys_id }}
+      Alterado: {{ req_comment_result is changed }}
+  changed_when: req_comment_result is changed

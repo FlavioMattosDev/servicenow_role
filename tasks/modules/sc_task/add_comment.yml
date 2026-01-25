@@ -1,0 +1,37 @@
+# tasks/modules/sc_task/add_comment.yml
+---
+# Adicionar comentário à Catalog Task
+
+- name: "Validar parâmetros para adicionar comentário"
+  assert:
+    that:
+      - sc_task_sys_id is defined
+      - sc_task_comments is defined
+    fail_msg: "sc_task_sys_id e sc_task_comments são obrigatórios"
+
+- name: "Adicionar comentário à Catalog Task - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.sc_task:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ sc_task_sys_id }}"
+
+    # Adicionar comentário
+    comments: "{{ sc_task_comments }}"
+
+    # Adicionar nota de trabalho se especificado
+    work_notes: "{{ sc_task_work_notes | default(omit) }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: sc_task_comment_result
+  no_log: true
+
+- name: "Exibir resultado da adição de comentário"
+  debug:
+    msg: |
+      Comentário adicionado ao Catalog Task {{ sc_task_sys_id }}
+      Alterado: {{ sc_task_comment_result is changed }}
+  changed_when: sc_task_comment_result is changed

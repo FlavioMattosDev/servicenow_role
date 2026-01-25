@@ -1,0 +1,99 @@
+# tasks/modules/api_info/get_table_info.yml
+---
+# Obter informações sobre uma tabela (metadados)
+
+- name: "Validar parâmetros para obter informações da tabela"
+  assert:
+    that:
+      - api_table is defined
+    fail_msg: "api_table é obrigatório para obter informações da tabela"
+
+- name: "Obter Informações da Tabela - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.api_info:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+
+    # Parâmetros obrigatórios
+    table: "{{ api_table }}"
+
+    # Especificar que queremos metadados
+    sysparm_exclude_reference_link: "true"
+    sysparm_display_value: "false"
+
+    # Limitar a 0 registros, apenas metadados
+    sysparm_limit: "0"
+
+    # Incluir contagem total
+    sysparm_include_count: "true"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: api_table_info_result
+  no_log: true
+
+- name: "Obter Schema da Tabela"
+  servicenow.itsm.api_info:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    table: "sys_dictionary"
+    query: "name={{ api_table }}^internal_type!=collection^ORname={{ api_table }}^internal_type=collection"
+    sysparm_fields: "element,internal_type,mandatory,max_length,reference,reference_key"
+    sysparm_limit: 1000
+  register: api_table_schema_result
+  no_log: true
+
+- name: "Processar informações da tabela"
+  set_fact:
+    api_table_info: "{{ api_table_info_result | default({}) }}"
+    api_table_schema: "{{ api_table_schema_result.records | default([]) }}"
+    api_table_field_count: "{{ api_table_schema_result.records | default([]) | length }}"
+    api_table_total_records: "{{ api_table_info_result.total_count | default(0) }}"
+
+- name: "Exibir informações da tabela"
+  debug:
+    msg: |
+      ============================================
+      INFORMAÇÕES DA TABELA
+      ============================================
+      Tabela: {{ api_table }}
+      Total de registros: {{ api_table_total_records }}
+      Total de campos: {{ api_table_field_count }}
+
+      Campos obrigatórios:
+      {% for field in api_table_schema %}
+        {% if field.mandatory == 'true' %}
+        - {{ field.element }} ({{ field.internal_type }})
+        {% endif %}
+      {% endfor %}
+
+      Campos de referência:
+      {% for field in api_table_schema %}
+        {% if field.reference is defined and field.reference != '' %}
+        - {{ field.element }} → {{ field.reference }}
+        {% endif %}
+      {% endfor %}
+      ============================================
+  changed_when: false
+
+- name: "Exportar schema para arquivo (opcional)"
+  copy:
+    content: |
+      # Schema da Tabela: {{ api_table }}
+      # Total de Campos: {{ api_table_field_count }}
+      # Total de Registros: {{ api_table_total_records }}
+
+      {% for field in api_table_schema %}
+      - Campo: {{ field.element }}
+        Tipo: {{ field.internal_type }}
+        Obrigatório: {{ field.mandatory | default('false') }}
+        Tamanho Máximo: {{ field.max_length | default('N/A') }}
+        Referência: {{ field.reference | default('Nenhuma') }}
+        Chave de Referência: {{ field.reference_key | default('N/A') }}
+      {% endfor %}
+    dest: "{{ api_schema_output_file | default('/tmp/' + api_table + '_schema.txt') }}"
+    mode: 0644
+  when: api_export_schema | default(false) | bool
+  changed_when: false

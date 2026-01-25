@@ -1,0 +1,69 @@
+# tasks/modules/incident/resolve_close.yml
+---
+# Resolver e encerrar incidente
+
+- name: "Validar parâmetros para resolver/encerrar"
+  assert:
+    that:
+      - incident_sys_id is defined
+    fail_msg: "incident_sys_id é obrigatório"
+
+- name: "Resolver incidente - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.incident:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ incident_sys_id }}"
+
+    # Resolver incidente
+    state: 4  # Resolved
+
+    # Código e notas de resolução
+    close_code: "{{ incident_close_code | default('Solved (Work Around)') }}"
+    close_notes: "{{ incident_close_notes | default('Incidente resolvido via Ansible') }}"
+
+    # Comentário de resolução
+    work_notes: "{{ incident_work_notes | default('Incidente resolvido. Aguardando confirmação do usuário.') }}"
+
+    # Registrar data de resolução
+    resolved_at: "{{ ansible_date_time.iso8601 }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: incident_resolve_result
+  no_log: true
+
+- name: "Encerrar incidente (opcional)"
+  servicenow.itsm.incident:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ incident_sys_id }}"
+
+    # Encerrar incidente
+    state: 5  # Closed
+
+    # Notas adicionais de fechamento
+    close_notes: "{{ incident_close_notes_final | default('Incidente encerrado via Ansible') }}"
+
+    # Comentário final
+    work_notes: "{{ incident_work_notes_final | default('Incidente encerrado.') }}"
+
+    # Registrar data de fechamento
+    closed_at: "{{ ansible_date_time.iso8601 }}"
+
+  when: incident_auto_close | default(false) | bool
+  register: incident_close_result
+  no_log: true
+
+- name: "Exibir resultado da resolução/encerramento"
+  debug:
+    msg: |
+      Incidente {{ incident_sys_id }} {{ 'encerrado' if incident_auto_close | default(false) | bool else 'resolvido' }}
+      Código: {{ incident_close_code | default('Solved (Work Around)') }}
+      Notas: {{ incident_close_notes | default('Incidente resolvido via Ansible') }}
+      Alterado: {{ (incident_resolve_result is changed) or (incident_close_result is defined and incident_close_result is changed) }}
+  changed_when: (incident_resolve_result is changed) or (incident_close_result is defined and incident_close_result is changed)

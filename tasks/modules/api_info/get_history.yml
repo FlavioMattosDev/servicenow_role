@@ -1,0 +1,131 @@
+# tasks/modules/api_info/get_history.yml
+---
+# Obter histórico completo de um registro
+
+- name: "Validar parâmetros para obter histórico"
+  assert:
+    that:
+      - api_table is defined
+      - api_sys_id is defined
+    fail_msg: "api_table e api_sys_id são obrigatórios"
+
+- name: "Obter Histórico de Alterações"
+  servicenow.itsm.api_info:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+
+    # Tabela de histórico
+    table: "sys_history_line"
+    query: "tablename={{ api_table }}^documentkey={{ api_sys_id }}"
+    sysparm_fields: "sys_created_on,sys_created_by,fieldname,oldvalue,newvalue,set,record_check,tablename"
+    sysparm_order_by: "-sys_created_on"
+    sysparm_limit: "{{ api_history_limit | default(200) }}"
+    sysparm_display_value: "true"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: api_history_result
+  no_log: true
+
+- name: "Processar histórico"
+  set_fact:
+    api_history: "{{ api_history_result.records }}"
+    api_history_count: "{{ api_history_result.records | length }}"
+    api_history_fields_changed: "{{ api_history_result.records | map(attribute='fieldname') | unique | list }}"
+
+- name: "Exibir resumo do histórico"
+  debug:
+    msg: |
+      ============================================
+      HISTÓRICO DO REGISTRO
+      ============================================
+      Tabela: {{ api_table }}
+      SYS_ID: {{ api_sys_id }}
+      Total de alterações: {{ api_history_count }}
+      Campos alterados: {{ api_history_fields_changed | length }}
+
+      Alterações por campo:
+      {% set field_counts = {} %}
+      {% for change in api_history %}
+        {% set field = change.fieldname %}
+        {% if field_counts[field] is defined %}
+          {% set _ = field_counts.update({field: field_counts[field] + 1}) %}
+        {% else %}
+          {% set _ = field_counts.update({field: 1}) %}
+        {% endif %}
+      {% endfor %}
+      {% for field, count in field_counts.items() | sort %}
+      - {{ field }}: {{ count }} alterações
+      {% endfor %}
+
+      Alterações por autor:
+      {% set author_counts = {} %}
+      {% for change in api_history %}
+        {% set author = change.sys_created_by.display_value %}
+        {% if author_counts[author] is defined %}
+          {% set _ = author_counts.update({author: author_counts[author] + 1}) %}
+        {% else %}
+          {% set _ = author_counts.update({author: 1}) %}
+        {% endif %}
+      {% endfor %}
+      {% for author, count in author_counts.items() | sort %}
+      - {{ author }}: {{ count }} alterações
+      {% endfor %}
+      ============================================
+  changed_when: false
+
+- name: "Exibir alterações recentes"
+  debug:
+    msg: |
+      Alterações recentes ({{ api_display_limit|default(10) }}):
+      {% for change in api_history[0:api_display_limit|default(10)] %}
+      --------------------------------------------
+      Data: {{ change.sys_created_on }}
+      Autor: {{ change.sys_created_by.display_value }}
+      Campo: {{ change.fieldname }}
+
+      De: {{ change.oldvalue | default('(vazio)') }}
+      Para: {{ change.newvalue | default('(vazio)') }}
+
+      {% endfor %}
+  when: api_history | length > 0
+  changed_when: false
+
+- name: "Criar linha do tempo do histórico"
+  set_fact:
+    api_timeline: |
+      {% set timeline = {} %}
+      {% for change in api_history %}
+        {% set date = change.sys_created_on[:10] %}  # Apenas data
+        {% if timeline[date] is defined %}
+          {% set _ = timeline[date].append({
+            'time': change.sys_created_on[11:19],
+            'author': change.sys_created_by.display_value,
+            'field': change.fieldname,
+            'change': change.oldvalue ~ ' → ' ~ change.newvalue
+          }) %}
+        {% else %}
+          {% set _ = timeline.update({date: [{
+            'time': change.sys_created_on[11:19],
+            'author': change.sys_created_by.display_value,
+            'field': change.fieldname,
+            'change': change.oldvalue ~ ' → ' ~ change.newvalue
+          }]}) %}
+        {% endif %}
+      {% endfor %}
+      {{ timeline }}
+
+- name: "Exibir linha do tempo"
+  debug:
+    msg: |
+      Linha do tempo do histórico:
+      {% for date, changes in api_timeline.items() | sort %}
+      {{ date }} ({{ changes | length }} alterações):
+        {% for change in changes %}
+        - {{ change.time }}: {{ change.author }} alterou {{ change.field }} ({{ change.change }})
+        {% endfor %}
+      {% endfor %}
+  when: api_timeline | length > 0
+  changed_when: false

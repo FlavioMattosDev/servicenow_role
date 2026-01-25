@@ -1,0 +1,37 @@
+# tasks/modules/sc_task/add_work_note.yml
+---
+# Adicionar nota de trabalho à Catalog Task
+
+- name: "Validar parâmetros para adicionar nota de trabalho"
+  assert:
+    that:
+      - sc_task_sys_id is defined
+      - sc_task_work_notes is defined
+    fail_msg: "sc_task_sys_id e sc_task_work_notes são obrigatórios"
+
+- name: "Adicionar nota de trabalho à Catalog Task - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.sc_task:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ sc_task_sys_id }}"
+
+    # Adicionar nota de trabalho
+    work_notes: "{{ sc_task_work_notes }}"
+
+    # Adicionar comentário se especificado
+    comments: "{{ sc_task_comments | default(omit) }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: sc_task_work_note_result
+  no_log: true
+
+- name: "Exibir resultado da adição de nota de trabalho"
+  debug:
+    msg: |
+      Nota de trabalho adicionada ao Catalog Task {{ sc_task_sys_id }}
+      Alterado: {{ sc_task_work_note_result is changed }}
+  changed_when: sc_task_work_note_result is changed

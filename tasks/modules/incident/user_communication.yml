@@ -1,0 +1,44 @@
+# tasks/modules/incident/user_communication.yml
+---
+# Registrar comunicação com usuário
+
+- name: "Validar parâmetros para registrar comunicação"
+  assert:
+    that:
+      - incident_sys_id is defined
+      - incident_comments is defined
+    fail_msg: "incident_sys_id e incident_comments são obrigatórios"
+
+- name: "Registrar comunicação com usuário - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.incident:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ incident_sys_id }}"
+
+    # Comentário para o usuário (visível no portal)
+    comments: "{{ incident_comments }}"
+
+    # Nota de trabalho interna (não visível para o usuário)
+    work_notes: "{{ incident_work_notes | default('Comunicação registrada com o usuário via Ansible') }}"
+
+    # Marcar como comunicação com usuário
+    user_communication: true
+
+    # Opcional: atualizar status após comunicação
+    state: "{{ incident_new_state | default(omit) }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: incident_communication_result
+  no_log: true
+
+- name: "Exibir resultado da comunicação"
+  debug:
+    msg: |
+      Comunicação registrada no incidente {{ incident_sys_id }}
+      Comentário para usuário: {{ incident_comments[:50] }}{{ '...' if incident_comments|length > 50 else '' }}
+      Alterado: {{ incident_communication_result is changed }}
+  changed_when: incident_communication_result is changed

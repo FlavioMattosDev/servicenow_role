@@ -1,0 +1,54 @@
+# tasks/modules/sc_task/update.yml
+---
+# Atualizar Catalog Task
+
+- name: "Validar parâmetros para atualizar Catalog Task"
+  assert:
+    that:
+      - sc_task_sys_id is defined
+    fail_msg: "sc_task_sys_id é obrigatório para atualizar Catalog Task"
+
+- name: "Atualizar Catalog Task - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.sc_task:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ sc_task_sys_id }}"
+
+    # Campos atualizáveis
+    short_description: "{{ sc_task_short_description | default(omit) }}"
+    description: "{{ sc_task_description | default(omit) }}"
+    state: "{{ sc_task_state | default(omit) }}"
+    assignment_group: "{{ sc_task_assignment_group | default(omit) }}"
+    assigned_to: "{{ sc_task_assigned_to | default(omit) }}"
+
+    # Campos de prioridade
+    priority: "{{ sc_task_priority | default(omit) }}"
+
+    # Campos de SLA
+    sla_due: "{{ sc_task_sla_due | default(omit) }}"
+
+    # Campos de data
+    due_date: "{{ sc_task_due_date | default(omit) }}"
+    closed_at: "{{ sc_task_closed_at | default(omit) }}"
+
+    # Campos de conclusão
+    close_code: "{{ sc_task_close_code | default(omit) }}"
+    close_notes: "{{ sc_task_close_notes | default(omit) }}"
+
+    # Outros campos
+    "{{ sc_task_other_fields | default({}) }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: sc_task_update_result
+  no_log: true
+
+- name: "Exibir resultado da atualização"
+  debug:
+    msg: |
+      Catalog Task {{ sc_task_sys_id }} atualizado
+      Alterado: {{ sc_task_update_result is changed }}
+  changed_when: sc_task_update_result is changed

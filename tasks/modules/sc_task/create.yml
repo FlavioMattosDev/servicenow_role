@@ -1,0 +1,64 @@
+# tasks/modules/sc_task/create.yml
+---
+# Criar Catalog Task (normalmente via RITM/fluxo)
+
+- name: "Validar parâmetros para criar Catalog Task"
+  assert:
+    that:
+      - sc_task_short_description is defined
+    fail_msg: "sc_task_short_description é obrigatório para criar Catalog Task"
+
+- name: "Criar Catalog Task - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.sc_task:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+
+    # Campos obrigatórios
+    short_description: "{{ sc_task_short_description }}"
+
+    # Campos opcionais
+    description: "{{ sc_task_description | default('') }}"
+    state: "{{ sc_task_state | default('open') }}"
+    assignment_group: "{{ sc_task_assignment_group | default(omit) }}"
+    assigned_to: "{{ sc_task_assigned_to | default(omit) }}"
+    opened_by: "{{ sc_task_opened_by | default(omit) }}"
+
+    # Relacionamento com RITM
+    request_item: "{{ sc_task_request_item | default(omit) }}"
+
+    # Campos de SLA
+    sla_due: "{{ sc_task_sla_due | default(omit) }}"
+    escalation: "{{ sc_task_escalation | default(0) }}"
+
+    # Campos adicionais
+    priority: "{{ sc_task_priority | default(3) }}"
+    configuration_item: "{{ sc_task_configuration_item | default(omit) }}"
+    order: "{{ sc_task_order | default(omit) }}"
+
+    # Campos de controle de fluxo
+    approval: "{{ sc_task_approval | default('not requested') }}"
+    upon_approval: "{{ sc_task_upon_approval | default('proceed') }}"
+    upon_reject: "{{ sc_task_upon_reject | default('cancel') }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: sc_task_create_result
+  no_log: true
+
+- name: "Registrar SYS_ID do Catalog Task criado"
+  set_fact:
+    created_sc_task_sys_id: "{{ sc_task_create_result.record.sys_id }}"
+    created_sc_task_number: "{{ sc_task_create_result.record.number }}"
+  when: sc_task_create_result is changed
+
+- name: "Exibir resultado da criação"
+  debug:
+    msg: |
+      Catalog Task criado com sucesso!
+      Número: {{ sc_task_create_result.record.number }}
+      SYS_ID: {{ sc_task_create_result.record.sys_id }}
+      Estado: {{ sc_task_create_result.record.state }}
+  when: sc_task_create_result is changed

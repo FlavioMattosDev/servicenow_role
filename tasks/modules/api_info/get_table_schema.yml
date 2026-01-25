@@ -1,0 +1,88 @@
+# tasks/modules/api_info/get_table_schema.yml
+---
+# Obter schema detalhado de uma tabela
+
+- name: "Validar parâmetros para obter schema"
+  assert:
+    that:
+      - api_table is defined
+    fail_msg: "api_table é obrigatório para obter schema"
+
+- name: "Obter Schema Detalhado da Tabela"
+  servicenow.itsm.api_info:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    table: "sys_dictionary"
+    query: "name={{ api_table }}^internal_type!=collection"
+    sysparm_fields: "element,internal_type,mandatory,max_length,reference,reference_cascade_rule,reference_floats,reference_key,sys_name,column_label,active,choice_table,choices,default_value,help_tag,dependent_on_field,dynamic_ref_qual,function_definition,calculation"
+    sysparm_limit: 500
+    sysparm_order_by: "element"
+  register: api_schema_result
+  no_log: true
+
+- name: "Obter Campos de Coleção (se houver)"
+  servicenow.itsm.api_info:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    table: "sys_dictionary"
+    query: "name={{ api_table }}^internal_type=collection"
+    sysparm_fields: "element,internal_type,reference,reference_key"
+    sysparm_limit: 50
+  register: api_collection_schema_result
+  no_log: true
+
+- name: "Processar schema completo"
+  set_fact:
+    api_table_schema_complete: "{{ api_schema_result.records }}"
+    api_collection_fields: "{{ api_collection_schema_result.records }}"
+    api_total_fields: "{{ (api_schema_result.records | length) + (api_collection_schema_result.records | length) }}"
+
+- name: "Exibir resumo do schema"
+  debug:
+    msg: |
+      ============================================
+      SCHEMA DA TABELA: {{ api_table }}
+      ============================================
+      Total de campos: {{ api_total_fields }}
+      Campos regulares: {{ api_schema_result.records | length }}
+      Campos de coleção: {{ api_collection_schema_result.records | length }}
+
+      Tipos de dados encontrados:
+      {% set type_count = {} %}
+      {% for field in api_schema_result.records %}
+        {% set type = field.internal_type %}
+        {% if type_count[type] is defined %}
+          {% set _ = type_count.update({type: type_count[type] + 1}) %}
+        {% else %}
+          {% set _ = type_count.update({type: 1}) %}
+        {% endif %}
+      {% endfor %}
+      {% for type, count in type_count.items() %}
+      - {{ type }}: {{ count }}
+      {% endfor %}
+      ============================================
+  changed_when: false
+
+- name: "Exibir campos obrigatórios"
+  debug:
+    msg: |
+      Campos obrigatórios ({{ api_schema_result.records | selectattr('mandatory', 'equalto', 'true') | list | length }}):
+      {% for field in api_schema_result.records | selectattr('mandatory', 'equalto', 'true') %}
+      - {{ field.element }} ({{ field.internal_type }}){% if field.column_label is defined %} - {{ field.column_label }}{% endif %}
+      {% endfor %}
+  when: api_schema_result.records | selectattr('mandatory', 'equalto', 'true') | list | length > 0
+  changed_when: false
+
+- name: "Exibir referências importantes"
+  debug:
+    msg: |
+      Campos de referência:
+      {% for field in api_schema_result.records %}
+        {% if field.reference is defined and field.reference != '' %}
+      - {{ field.element }} → {{ field.reference }} ({{ field.reference_key | default('sys_id') }})
+        {% endif %}
+      {% endfor %}
+  when: api_schema_result.records | selectattr('reference', 'defined') | list | length > 0
+  changed_when: false

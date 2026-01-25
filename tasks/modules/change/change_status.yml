@@ -1,0 +1,60 @@
+# tasks/modules/change/change_status.yml
+---
+# Atualizar status da Change
+
+- name: "Validar parâmetros para mudança de status"
+  assert:
+    that:
+      - change_sys_id is defined
+      - change_new_state is defined
+    fail_msg: "change_sys_id e change_new_state são obrigatórios"
+
+- name: "Validar estados permitidos"
+  assert:
+    that:
+      - change_new_state in ['new', 'assess', 'authorize', 'scheduled', 'implement', 'review', 'closed']
+    fail_msg: "Estado '{{ change_new_state }}' inválido. Use: new, assess, authorize, scheduled, implement, review, closed"
+
+- name: "Atualizar status da Change - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.change_request:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ change_sys_id }}"
+
+    # Mudar estado
+    state: "{{ change_new_state }}"
+
+    # Campos específicos para implementação
+    implementation_plan: "{{ change_implementation_plan | default(omit) }}"
+    test_plan: "{{ change_test_plan | default(omit) }}"
+    backout_plan: "{{ change_backout_plan | default(omit) }}"
+
+    # Campos específicos para revisão
+    review_comments: "{{ change_review_comments | default(omit) }}"
+    review_date: "{{ change_review_date | default(omit) }}"
+
+    # Campos específicos para fechamento
+    close_notes: "{{ change_close_notes | default(omit) }}"
+    close_code: "{{ change_close_code | default(omit) }}"
+
+    # Comentário automático
+    work_notes: "{{ change_work_notes | default('Status alterado para ' + change_new_state) }}"
+
+    # Registrar datas relevantes
+    implemented_at: "{{ ansible_date_time.iso8601 if change_new_state == 'implement' else omit }}"
+    closed_at: "{{ ansible_date_time.iso8601 if change_new_state == 'closed' else omit }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: change_status_result
+  no_log: true
+
+- name: "Exibir resultado da mudança de status"
+  debug:
+    msg: |
+      Change {{ change_sys_id }} status alterado para {{ change_new_state }}
+      Alterado: {{ change_status_result is changed }}
+  changed_when: change_status_result is changed

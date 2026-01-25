@@ -1,0 +1,52 @@
+# tasks/modules/ritm/update.yml
+---
+# Atualizar Requested Item
+
+- name: "Validar parâmetros para atualizar RITM"
+  assert:
+    that:
+      - ritm_sys_id is defined
+    fail_msg: "ritm_sys_id é obrigatório para atualizar RITM"
+
+- name: "Atualizar Requested Item - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.sc_req_item:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ ritm_sys_id }}"
+
+    # Campos atualizáveis
+    short_description: "{{ ritm_short_description | default(omit) }}"
+    description: "{{ ritm_description | default(omit) }}"
+    stage: "{{ ritm_stage | default(omit) }}"
+    state: "{{ ritm_state | default(omit) }}"
+
+    # Atribuição
+    assignment_group: "{{ ritm_assignment_group | default(omit) }}"
+    assigned_to: "{{ ritm_assigned_to | default(omit) }}"
+
+    # Quantidade
+    quantity: "{{ ritm_quantity | default(omit) }}"
+
+    # Urgência
+    urgency: "{{ ritm_urgency | default(omit) }}"
+
+    # Variáveis do catálogo
+    variables: "{{ ritm_variables | default({}) }}"
+
+    # Campos de aprovação
+    approval: "{{ ritm_approval | default(omit) }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: ritm_update_result
+  no_log: true
+
+- name: "Exibir resultado da atualização"
+  debug:
+    msg: |
+      Requested Item {{ ritm_sys_id }} atualizado
+      Alterado: {{ ritm_update_result is changed }}
+  changed_when: ritm_update_result is changed

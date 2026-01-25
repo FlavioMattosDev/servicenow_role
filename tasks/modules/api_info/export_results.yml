@@ -1,0 +1,155 @@
+# tasks/modules/api_info/export_results.yml
+---
+# Exportar resultados em diferentes formatos
+
+- name: "Validar parâmetros para exportação"
+  assert:
+    that:
+      - api_table is defined
+      - api_export_format is defined
+    fail_msg: "api_table e api_export_format são obrigatórios"
+
+- name: "Obter Dados para Exportação"
+  servicenow.itsm.api_info:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+
+    # Parâmetros obrigatórios
+    table: "{{ api_table }}"
+
+    # Parâmetros de consulta
+    query: "{{ api_query | default(omit) }}"
+
+    # Colunas específicas
+    columns: "{{ api_columns | default(omit) }}"
+    sysparm_fields: "{{ api_sysparm_fields | default(omit) }}"
+
+    # Ordenação
+    sysparm_order_by: "{{ api_order_by | default(omit) }}"
+
+    # Limite para exportação
+    sysparm_limit: "{{ api_export_limit | default(1000) }}"
+
+    # Formato de exportação
+    sysparm_display_value: "{{ 'true' if api_export_format in ['csv', 'excel', 'pdf'] else 'false' }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: api_export_data
+  no_log: true
+
+- name: "Processar dados para exportação"
+  set_fact:
+    api_export_records: "{{ api_export_data.records }}"
+    api_export_count: "{{ api_export_data.records | length }}"
+    api_export_fields: "{{ api_export_records[0].keys() if api_export_records | length > 0 else [] }}"
+
+- name: "Exportar para CSV"
+  copy:
+    content: |
+      {% if api_export_format == 'csv' %}
+        {% set fields = api_export_fields %}
+        {{ fields | join(',') }}
+        {% for record in api_export_records %}
+          {% set row = [] %}
+          {% for field in fields %}
+            {% set value = record[field] | default('') %}
+            {% set value_str = value | string %}
+            {% if ',' in value_str or '"' in value_str or '\n' in value_str %}
+              {% set value_str = '"' ~ value_str | replace('"', '""') ~ '"' %}
+            {% endif %}
+            {% set _ = row.append(value_str) %}
+          {% endfor %}
+      {{ row | join(',') }}
+        {% endfor %}
+      {% endif %}
+    dest: "{{ api_output_file | default('/tmp/' + api_table + '_export.csv') }}"
+    mode: 0644
+  when: api_export_format == 'csv'
+  changed_when: false
+
+- name: "Exportar para JSON"
+  copy:
+    content: "{{ api_export_records | to_nice_json(indent=2) }}"
+    dest: "{{ api_output_file | default('/tmp/' + api_table + '_export.json') }}"
+    mode: 0644
+  when: api_export_format == 'json'
+  changed_when: false
+
+- name: "Exportar para YAML"
+  copy:
+    content: "{{ api_export_records | to_nice_yaml(width=1000) }}"
+    dest: "{{ api_output_file | default('/tmp/' + api_table + '_export.yaml') }}"
+    mode: 0644
+  when: api_export_format == 'yaml'
+  changed_when: false
+
+- name: "Exportar para HTML"
+  copy:
+    content: |
+      <!DOCTYPE html>
+      <html>
+      <head>
+          <title>Exportação: {{ api_table }}</title>
+          <style>
+              body { font-family: Arial, sans-serif; margin: 20px; }
+              table { border-collapse: collapse; width: 100%; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              th { background-color: #f2f2f2; }
+              tr:nth-child(even) { background-color: #f9f9f9; }
+              .summary { background-color: #e8f4f8; padding: 10px; margin-bottom: 20px; }
+          </style>
+      </head>
+      <body>
+          <h1>Exportação: {{ api_table }}</h1>
+          <div class="summary">
+              <p><strong>Data da exportação:</strong> {{ ansible_date_time.iso8601 }}</p>
+              <p><strong>Total de registros:</strong> {{ api_export_count }}</p>
+              <p><strong>Filtro aplicado:</strong> {{ api_query | default('Nenhum') }}</p>
+          </div>
+          <table>
+              <thead>
+                  <tr>
+                      {% for field in api_export_fields %}
+                      <th>{{ field }}</th>
+                      {% endfor %}
+                  </tr>
+              </thead>
+              <tbody>
+                  {% for record in api_export_records %}
+                  <tr>
+                      {% for field in api_export_fields %}
+                      <td>{{ record[field] | default('') }}</td>
+                      {% endfor %}
+                  </tr>
+                  {% endfor %}
+              </tbody>
+          </table>
+      </body>
+      </html>
+    dest: "{{ api_output_file | default('/tmp/' + api_table + '_export.html') }}"
+    mode: 0644
+  when: api_export_format == 'html'
+  changed_when: false
+
+- name: "Exibir resumo da exportação"
+  debug:
+    msg: |
+      ============================================
+      EXPORTAÇÃO CONCLUÍDA
+      ============================================
+      Tabela: {{ api_table }}
+      Formato: {{ api_export_format | upper }}
+      Registros exportados: {{ api_export_count }}
+      Arquivo gerado: {{ api_output_file | default('/tmp/' + api_table + '_export.' + api_export_format) }}
+
+      Campos exportados ({{ api_export_fields | length }}):
+      {% for field in api_export_fields %}
+      - {{ field }}
+      {% endfor %}
+
+      Tamanho estimado: {{ api_export_count * api_export_fields | length * 50 }} bytes
+      ============================================
+  changed_when: false

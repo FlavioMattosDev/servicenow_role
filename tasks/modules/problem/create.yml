@@ -1,0 +1,66 @@
+# tasks/modules/problem/create.yml
+---
+# Criar Problem
+
+- name: "Validar parâmetros para criar problem"
+  assert:
+    that:
+      - problem_short_description is defined
+    fail_msg: "problem_short_description é obrigatório para criar problem"
+
+- name: "Criar Problem - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.problem:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+
+    # Campos obrigatórios
+    short_description: "{{ problem_short_description }}"
+
+    # Campos opcionais
+    description: "{{ problem_description | default('') }}"
+
+    # Impacto e urgência
+    impact: "{{ problem_impact | default(3) }}"
+    urgency: "{{ problem_urgency | default(3) }}"
+    priority: "{{ problem_priority | default(3) }}"
+
+    # Categorização
+    category: "{{ problem_category | default(omit) }}"
+    subcategory: "{{ problem_subcategory | default(omit) }}"
+
+    # Atribuição inicial
+    assignment_group: "{{ problem_assignment_group | default(omit) }}"
+    assigned_to: "{{ problem_assigned_to | default(omit) }}"
+
+    # Estado inicial
+    state: "{{ problem_state | default('new') }}"
+
+    # Configuração Item relacionado
+    cmdb_ci: "{{ problem_cmdb_ci | default(omit) }}"
+
+    # Comentários iniciais
+    comments: "{{ problem_comments | default('Problem criado via Ansible') }}"
+    work_notes: "{{ problem_work_notes | default('') }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: problem_create_result
+  no_log: true
+
+- name: "Registrar SYS_ID do problem criado"
+  set_fact:
+    created_problem_sys_id: "{{ problem_create_result.record.sys_id }}"
+    created_problem_number: "{{ problem_create_result.record.number }}"
+  when: problem_create_result is changed
+
+- name: "Exibir resultado da criação"
+  debug:
+    msg: |
+      Problem criado com sucesso!
+      Número: {{ problem_create_result.record.number }}
+      SYS_ID: {{ problem_create_result.record.sys_id }}
+      Estado: {{ problem_create_result.record.state }}
+  when: problem_create_result is changed

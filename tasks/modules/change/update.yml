@@ -1,0 +1,62 @@
+# tasks/modules/change/update.yml
+---
+# Atualizar Change
+
+- name: "Validar parâmetros para atualizar change"
+  assert:
+    that:
+      - change_sys_id is defined
+    fail_msg: "change_sys_id é obrigatório para atualizar change"
+
+- name: "Atualizar Change - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.change_request:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ change_sys_id }}"
+
+    # Campos atualizáveis
+    short_description: "{{ change_short_description | default(omit) }}"
+    description: "{{ change_description | default(omit) }}"
+
+    # Tipo de change
+    type: "{{ change_type | default(omit) }}"
+    category: "{{ change_category | default(omit) }}"
+
+    # Impacto e risco
+    impact: "{{ change_impact | default(omit) }}"
+    risk: "{{ change_risk | default(omit) }}"
+
+    # Justificativa
+    justification: "{{ change_justification | default(omit) }}"
+
+    # Atribuição
+    assignment_group: "{{ change_assignment_group | default(omit) }}"
+    assigned_to: "{{ change_assigned_to | default(omit) }}"
+
+    # Estado
+    state: "{{ change_state | default(omit) }}"
+
+    # Configuração Item
+    cmdb_ci: "{{ change_cmdb_ci | default(omit) }}"
+
+    # Planejamento
+    start_date: "{{ change_start_date | default(omit) }}"
+    end_date: "{{ change_end_date | default(omit) }}"
+
+    # Outros campos
+    "{{ change_other_fields | default({}) }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: change_update_result
+  no_log: true
+
+- name: "Exibir resultado da atualização"
+  debug:
+    msg: |
+      Change {{ change_sys_id }} atualizada
+      Alterado: {{ change_update_result is changed }}
+  changed_when: change_update_result is changed

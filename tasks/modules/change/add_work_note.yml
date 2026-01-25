@@ -1,0 +1,37 @@
+# tasks/modules/change/add_work_note.yml
+---
+# Adicionar nota de trabalho à Change
+
+- name: "Validar parâmetros para adicionar nota de trabalho"
+  assert:
+    that:
+      - change_sys_id is defined
+      - change_work_notes is defined
+    fail_msg: "change_sys_id e change_work_notes são obrigatórios"
+
+- name: "Adicionar nota de trabalho à Change - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.change_request:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ change_sys_id }}"
+
+    # Adicionar nota de trabalho
+    work_notes: "{{ change_work_notes }}"
+
+    # Adicionar comentário se especificado
+    comments: "{{ change_comments | default(omit) }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: change_work_note_result
+  no_log: true
+
+- name: "Exibir resultado da adição de nota de trabalho"
+  debug:
+    msg: |
+      Nota de trabalho adicionada à Change {{ change_sys_id }}
+      Alterado: {{ change_work_note_result is changed }}
+  changed_when: change_work_note_result is changed

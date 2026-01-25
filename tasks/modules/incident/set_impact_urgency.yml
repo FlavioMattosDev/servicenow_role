@@ -1,0 +1,45 @@
+# tasks/modules/incident/set_impact_urgency.yml
+---
+# Definir impacto, urgência e prioridade do incidente
+
+- name: "Validar parâmetros para definir impacto/urgência"
+  assert:
+    that:
+      - incident_sys_id is defined
+    fail_msg: "incident_sys_id é obrigatório"
+
+- name: "Definir impacto, urgência e prioridade - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.incident:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ incident_sys_id }}"
+
+    # Impacto (1=High, 2=Medium, 3=Low)
+    impact: "{{ incident_impact | default(omit) }}"
+
+    # Urgência (1=High, 2=Medium, 3=Low)
+    urgency: "{{ incident_urgency | default(omit) }}"
+
+    # Prioridade (1=Critical, 2=High, 3=Moderate, 4=Low)
+    priority: "{{ incident_priority | default(omit) }}"
+
+    # Comentário explicativo
+    work_notes: "{{ incident_work_notes | default('Impacto/Urgência/Prioridade ajustados via Ansible') }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: incident_impact_result
+  no_log: true
+
+- name: "Exibir valores atualizados"
+  debug:
+    msg: |
+      Valores de impacto/urgência/prioridade ajustados para incidente {{ incident_sys_id }}
+      Impacto: {{ incident_impact | default('Não alterado') }}
+      Urgência: {{ incident_urgency | default('Não alterado') }}
+      Prioridade: {{ incident_priority | default('Não alterado') }}
+      Alterado: {{ incident_impact_result is changed }}
+  changed_when: incident_impact_result is changed

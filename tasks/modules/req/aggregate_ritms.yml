@@ -1,0 +1,44 @@
+# tasks/modules/req/aggregate_ritms.yml
+---
+# Agregar múltiplos RITMs ao Request
+
+- name: "Validar parâmetros para agregar RITMs"
+  assert:
+    that:
+      - req_sys_id is defined
+      - ritm_sys_ids is defined
+    fail_msg: "req_sys_id e ritm_sys_ids são obrigatórios"
+
+- name: "Agregar RITMs ao Request - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.sc_req_item:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ item }}"
+    request: "{{ req_sys_id }}"
+    work_notes: "RITM agregado ao Request {{ req_sys_id }} via Ansible"
+  loop: "{{ ritm_sys_ids }}"
+  register: req_aggregate_ritms_result
+  no_log: true
+
+- name: "Verificar RITMs agregados"
+  servicenow.itsm.api_info:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    table: "sc_req_item"
+    query: "request={{ req_sys_id }}"
+    sysparm_fields: "number,short_description"
+  register: req_ritms_list
+  no_log: true
+
+- name: "Exibir RITMs agregados"
+  debug:
+    msg: |
+      RITMs agregados ao Request {{ req_sys_id }}:
+      {% for ritm in req_ritms_list.records %}
+      - {{ ritm.number }}: {{ ritm.short_description }}
+      {% endfor %}
+      Total: {{ req_ritms_list.records | length }} RITMs
+  changed_when: req_aggregate_ritms_result is changed

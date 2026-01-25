@@ -1,0 +1,50 @@
+# tasks/modules/sc_task/change_status.yml
+---
+# Atualizar status da Catalog Task
+
+- name: "Validar parâmetros para mudança de status"
+  assert:
+    that:
+      - sc_task_sys_id is defined
+      - sc_task_new_state is defined
+    fail_msg: "sc_task_sys_id e sc_task_new_state são obrigatórios"
+
+- name: "Validar status permitido"
+  assert:
+    that:
+      - sc_task_new_state in ['open', 'work_in_progress', 'closed_complete', 'closed_incomplete', 'pending']
+    fail_msg: "Status '{{ sc_task_new_state }}' inválido. Use: open, work_in_progress, closed_complete, closed_incomplete, pending"
+
+- name: "Atualizar status da Catalog Task - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.sc_task:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ sc_task_sys_id }}"
+
+    # Mudar estado
+    state: "{{ sc_task_new_state }}"
+
+    # Campos específicos para fechamento
+    close_code: "{{ sc_task_close_code | default(omit) }}"
+    close_notes: "{{ sc_task_close_notes | default(omit) }}"
+
+    # Comentário automático
+    work_notes: "{{ sc_task_work_notes | default('Status alterado para ' + sc_task_new_state) }}"
+
+    # Se estiver fechando, registrar data
+    closed_at: "{{ '{{ ansible_date_time.iso8601 }}' if sc_task_new_state in ['closed_complete', 'closed_incomplete'] else omit }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: sc_task_status_result
+  no_log: true
+
+- name: "Exibir resultado da mudança de status"
+  debug:
+    msg: |
+      Catalog Task {{ sc_task_sys_id }} status alterado para {{ sc_task_new_state }}
+      Alterado: {{ sc_task_status_result is changed }}
+  changed_when: sc_task_status_result is changed

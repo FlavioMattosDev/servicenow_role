@@ -1,0 +1,43 @@
+# tasks/modules/ritm/assign_group.yml
+---
+# Atribuir RITM a um grupo
+
+- name: "Validar parâmetros para atribuição a grupo"
+  assert:
+    that:
+      - ritm_sys_id is defined
+      - ritm_assignment_group is defined
+    fail_msg: "ritm_sys_id e ritm_assignment_group são obrigatórios"
+
+- name: "Atribuir Requested Item para grupo - IMPLEMENTAÇÃO REAL"
+  servicenow.itsm.sc_req_item:
+    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
+    username: "{{ servicenow_creds.servicenow_connection.username }}"
+    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    state: present
+    sys_id: "{{ ritm_sys_id }}"
+
+    # Atribuir ao grupo
+    assignment_group: "{{ ritm_assignment_group }}"
+
+    # Remover atribuição individual se existir
+    assigned_to: ""
+
+    # Mudar estágio se especificado
+    stage: "{{ ritm_new_stage | default('fulfillment') }}"
+
+    # Comentário automático
+    work_notes: "{{ ritm_work_notes | default('RITM atribuído para o grupo ' + ritm_assignment_group) }}"
+
+    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+
+  register: ritm_assign_group_result
+  no_log: true
+
+- name: "Exibir resultado da atribuição para grupo"
+  debug:
+    msg: |
+      Requested Item {{ ritm_sys_id }} atribuído para grupo {{ ritm_assignment_group }}
+      Alterado: {{ ritm_assign_group_result is changed }}
+  changed_when: ritm_assign_group_result is changed
