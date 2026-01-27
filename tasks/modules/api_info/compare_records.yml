@@ -11,9 +11,9 @@
 
 - name: "Obter primeiro conjunto de registros"
   servicenow.itsm.api_info:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     table: "{{ api_table }}"
     query: "{{ api_query_a | default('') }}"
     sysparm_fields: "{{ api_fields | default('sys_id,number,short_description,sys_updated_on') }}"
@@ -25,9 +25,9 @@
 
 - name: "Obter segundo conjunto de registros"
   servicenow.itsm.api_info:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     table: "{{ api_table }}"
     query: "{{ api_query_b | default('') }}"
     sysparm_fields: "{{ api_fields | default('sys_id,number,short_description,sys_updated_on') }}"
@@ -39,9 +39,9 @@
 
 - name: "Obter registro A (para comparação individual)"
   servicenow.itsm.api_info:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     table: "{{ api_table }}"
     sys_id: "{{ api_sys_id_a }}"
     sysparm_fields: "{{ api_fields | default('*') }}"
@@ -52,9 +52,9 @@
 
 - name: "Obter registro B (para comparação individual)"
   servicenow.itsm.api_info:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     table: "{{ api_table }}"
     sys_id: "{{ api_sys_id_b }}"
     sysparm_fields: "{{ api_fields | default('*') }}"

@@ -10,9 +10,9 @@
 
 - name: "Verificar status dos RITMs associados"
   servicenow.itsm.api_info:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     table: "sc_req_item"
     query: "request={{ req_sys_id }}"
     sysparm_fields: "number,stage,state"
@@ -27,9 +27,9 @@
 
 - name: "Fechar Request se todos os RITMs estiverem fechados"
   servicenow.itsm.sc_request:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     state: present
     sys_id: "{{ req_sys_id }}"
     stage: "closed_complete"

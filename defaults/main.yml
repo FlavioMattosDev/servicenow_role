@@ -2,11 +2,22 @@
 ---
 # Configurações padrão para a role ServiceNow ITSM
 
-# Conexão ServiceNow - será substituída pelas credenciais reais
-servicenow_instance_vars:
-  host: "https://dev12345.service-now.com"
-  username: "admin"
-  password: "password"
+# Conexão ServiceNow - Mapeamento direto das variáveis do AAP
+servicenow_connection:
+  instance: "{{ servicenow_url }}"
+  username: "{{ servicenow_user }}"
+  password: "{{ servicenow_pass }}"
+  timeout: "{{ servicenow_default_timeout | default(30) }}"
+  validate_certs: "{{ servicenow_default_validate_certs | default(true) }}"
+  # Configurações avançadas (opcionais via AAP ou Playbook)
+  oauth:
+    client_id: "{{ servicenow_oauth_client_id | default(omit) }}"
+    client_secret: "{{ servicenow_oauth_client_secret | default(omit) }}"
+    token_url: "{{ servicenow_oauth_token_url | default(omit) }}"
+  proxy:
+    url: "{{ servicenow_proxy_url | default(omit) }}"
+    username: "{{ servicenow_proxy_username | default(omit) }}"
+    password: "{{ servicenow_proxy_password | default(omit) }}"
 
 # Configurações padrão para operações
 servicenow_default_timeout: 30

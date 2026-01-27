@@ -11,9 +11,9 @@
 
 - name: "Determinar campos pesquisáveis"
   servicenow.itsm.api_info:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     table: "sys_dictionary"
     query: "name={{ api_table }}^(internal_type=string^ORinternal_type=journal^ORinternal_type=html^ORinternal_type=email^ORinternal_type=url^ORinternal_type=phone)"
     sysparm_fields: "element,internal_type"
@@ -38,9 +38,9 @@
 
 - name: "Executar busca textual"
   servicenow.itsm.api_info:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     table: "{{ api_table }}"
     query: "{{ api_search_query }}"
     sysparm_fields: "{{ api_search_fields | default('sys_id,number,short_description') }}"

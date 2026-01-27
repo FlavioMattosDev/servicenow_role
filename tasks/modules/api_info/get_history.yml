@@ -11,9 +11,9 @@
 
 - name: "Obter Histórico de Alterações"
   servicenow.itsm.api_info:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
 
     # Tabela de histórico
     table: "sys_history_line"
@@ -23,8 +23,8 @@
     sysparm_limit: "{{ api_history_limit | default(200) }}"
     sysparm_display_value: "true"
 
-    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
-    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+    timeout: "{{ servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
 
   register: api_history_result
   no_log: true

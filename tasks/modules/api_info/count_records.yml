@@ -10,9 +10,9 @@
 
 - name: "Contar Registros - IMPLEMENTAÇÃO REAL"
   servicenow.itsm.api_info:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
 
     # Parâmetros obrigatórios
     table: "{{ api_table }}"
@@ -29,8 +29,8 @@
     sysparm_exclude_reference_link: "true"
     sysparm_suppress_pagination_header: "true"
 
-    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
-    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+    timeout: "{{ servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
 
   register: api_count_result
   no_log: true
@@ -60,9 +60,9 @@
 
 - name: "Contagem agrupada (se solicitado)"
   servicenow.itsm.api_info:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     table: "{{ api_table }}"
     query: "{{ api_query | default(omit) }}"
     sysparm_group_by: "{{ api_group_by }}"

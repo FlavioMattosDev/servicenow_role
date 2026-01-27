@@ -11,9 +11,9 @@
 
 - name: "Associar CI ao incidente - IMPLEMENTAÇÃO REAL"
   servicenow.itsm.incident:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     state: present
     sys_id: "{{ incident_sys_id }}"
 
@@ -26,17 +26,17 @@
     # Opcional: associar serviço de negócio
     business_service: "{{ incident_business_service | default(omit) }}"
 
-    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
-    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+    timeout: "{{ servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
 
   register: incident_ci_result
   no_log: true
 
 - name: "Obter informações do CI"
   servicenow.itsm.api_info:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     table: "cmdb_ci"
     sys_id: "{{ incident_cmdb_ci }}"
     sysparm_fields: "name,operational_status,sys_class_name"

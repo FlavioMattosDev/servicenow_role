@@ -10,9 +10,9 @@
 
 - name: "Resolver incidente - IMPLEMENTAÇÃO REAL"
   servicenow.itsm.incident:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     state: present
     sys_id: "{{ incident_sys_id }}"
 
@@ -29,17 +29,17 @@
     # Registrar data de resolução
     resolved_at: "{{ ansible_date_time.iso8601 }}"
 
-    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
-    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+    timeout: "{{ servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
 
   register: incident_resolve_result
   no_log: true
 
 - name: "Encerrar incidente (opcional)"
   servicenow.itsm.incident:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     state: present
     sys_id: "{{ incident_sys_id }}"
 

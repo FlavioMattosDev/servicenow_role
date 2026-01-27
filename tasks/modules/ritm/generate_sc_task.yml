@@ -10,9 +10,9 @@
 
 - name: "Obter informações do RITM para geração de tasks"
   servicenow.itsm.api_info:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     table: "sc_req_item"
     sys_id: "{{ ritm_sys_id }}"
     sysparm_fields: "cat_item,short_description,description,request"
@@ -21,9 +21,9 @@
 
 - name: "Criar Catalog Tasks para o RITM - IMPLEMENTAÇÃO REAL"
   servicenow.itsm.sc_task:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     state: present
 
     # Relacionar com RITM
@@ -48,8 +48,8 @@
     loop_control:
       loop_var: task_index
 
-    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
-    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+    timeout: "{{ servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
 
   register: ritm_generate_tasks_result
   no_log: true

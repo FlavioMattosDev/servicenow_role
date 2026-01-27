@@ -11,9 +11,9 @@
 
 - name: "Atualizar outros campos da Catalog Task - IMPLEMENTAÇÃO REAL"
   servicenow.itsm.sc_task:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     state: present
     sys_id: "{{ sc_task_sys_id }}"
 
@@ -23,8 +23,8 @@
     # Adicionar nota de trabalho sobre a atualização
     work_notes: "{{ sc_task_work_notes | default('Campos adicionais atualizados via Ansible') }}"
 
-    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
-    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+    timeout: "{{ servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
 
   register: sc_task_other_fields_result
   no_log: true

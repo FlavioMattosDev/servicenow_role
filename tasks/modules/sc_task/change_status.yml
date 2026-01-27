@@ -1,6 +1,6 @@
 # tasks/modules/sc_task/change_status.yml
 ---
-# Atualizar status da Catalog Task
+# Atualizar status da Catalog Task (SC_TASK)
 
 - name: "Validar parâmetros para mudança de status"
   assert:
@@ -9,42 +9,36 @@
       - sc_task_new_state is defined
     fail_msg: "sc_task_sys_id e sc_task_new_state são obrigatórios"
 
-- name: "Validar status permitido"
+- name: "Validar status permitido (Inteiros do ServiceNow)"
   assert:
     that:
-      - sc_task_new_state in ['open', 'work_in_progress', 'closed_complete', 'closed_incomplete', 'pending']
-    fail_msg: "Status '{{ sc_task_new_state }}' inválido. Use: open, work_in_progress, closed_complete, closed_incomplete, pending"
+      # No ServiceNow SC_TASK: 1(Open), 2(Work in Progress), 3(Closed Complete), 4(Closed Incomplete), -5(Pending)
+      - sc_task_new_state | int in [1, 2, 3, 4, 7, -5]
+    fail_msg: "Status '{{ sc_task_new_state }}' inválido. Use os IDs numéricos do seu ServiceNow (ex: 2 para Work in Progress)."
 
-- name: "Atualizar status da Catalog Task - IMPLEMENTAÇÃO REAL"
+- name: "Atualizar status da Catalog Task"
   servicenow.itsm.sc_task:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    # Usando a estrutura simplificada do defaults/main.yml
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
+    timeout: "{{ servicenow_connection.timeout }}"
+    validate_certs: "{{ servicenow_connection.validate_certs }}"
+
     state: present
     sys_id: "{{ sc_task_sys_id }}"
 
-    # Mudar estado
-    state: "{{ sc_task_new_state }}"
-
-    # Campos específicos para fechamento
-    close_code: "{{ sc_task_close_code | default(omit) }}"
-    close_notes: "{{ sc_task_close_notes | default(omit) }}"
-
-    # Comentário automático
-    work_notes: "{{ sc_task_work_notes | default('Status alterado para ' + sc_task_new_state) }}"
-
-    # Se estiver fechando, registrar data
-    closed_at: "{{ '{{ ansible_date_time.iso8601 }}' if sc_task_new_state in ['closed_complete', 'closed_incomplete'] else omit }}"
-
-    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
-    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+    # Mapeamento do campo State (Outras informações enviadas em 'other_fields')
+    other_fields:
+      state: "{{ sc_task_new_state | int }}"
+      close_code: "{{ sc_task_close_code | default(omit) }}"
+      close_notes: "{{ sc_task_close_notes | default(omit) }}"
+      work_notes: "{{ sc_task_work_notes | default('Status alterado via automação Ansible') }}"
 
   register: sc_task_status_result
-  no_log: true
+  no_log: false # Defina como true em produção para esconder a senha no log
 
 - name: "Exibir resultado da mudança de status"
   debug:
-    msg: |
-      Catalog Task {{ sc_task_sys_id }} status alterado para {{ sc_task_new_state }}
-      Alterado: {{ sc_task_status_result is changed }}
-  changed_when: sc_task_status_result is changed
+    msg: "Catalog Task {{ sc_task_sys_id }} status alterado para {{ sc_task_new_state }}"
+  when: sc_task_status_result is not failed

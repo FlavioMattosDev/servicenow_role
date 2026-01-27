@@ -17,9 +17,9 @@
 
 - name: "Atualizar status da Change - IMPLEMENTAÇÃO REAL"
   servicenow.itsm.change_request:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     state: present
     sys_id: "{{ change_sys_id }}"
 
@@ -46,8 +46,8 @@
     implemented_at: "{{ ansible_date_time.iso8601 if change_new_state == 'implement' else omit }}"
     closed_at: "{{ ansible_date_time.iso8601 if change_new_state == 'closed' else omit }}"
 
-    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
-    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+    timeout: "{{ servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
 
   register: change_status_result
   no_log: true

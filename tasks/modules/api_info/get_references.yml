@@ -11,9 +11,9 @@
 
 - name: "Obter Schema para identificar campos de referência"
   servicenow.itsm.api_info:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     table: "sys_dictionary"
     query: "name={{ api_table }}^reference!=^referenceISNOTEMPTY"
     sysparm_fields: "element,reference"
@@ -23,9 +23,9 @@
 
 - name: "Obter Informações do Registro para Extrair Referências"
   servicenow.itsm.api_info:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     table: "{{ api_table }}"
     sys_id: "{{ api_sys_id }}"
     sysparm_display_value: "true"
@@ -57,9 +57,9 @@
 
 - name: "Buscar referências reversas (quem referencia este registro)"
   servicenow.itsm.api_info:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     table: "sys_db_object"
     query: "super_class={{ api_table }}^ORname={{ api_table }}"
     sysparm_fields: "name,label"
@@ -69,9 +69,9 @@
 
 - name: "Buscar registros que referenciam este SYS_ID"
   servicenow.itsm.api_info:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     table: "{{ item.name }}"
     query: "{{ api_table }}={{ api_sys_id }}"
     sysparm_fields: "sys_id,number,short_description"

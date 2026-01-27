@@ -10,9 +10,9 @@
 
 - name: "Obter informações do Problem"
   servicenow.itsm.api_info:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     table: "problem"
     sys_id: "{{ problem_sys_id }}"
     sysparm_fields: "short_description,description,cmdb_ci,assignment_group"
@@ -21,9 +21,9 @@
 
 - name: "Gerar Change Request - IMPLEMENTAÇÃO REAL"
   servicenow.itsm.change_request:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     state: present
 
     # Criar Change baseado no Problem
@@ -52,17 +52,17 @@
     start_date: "{{ change_start_date | default(omit) }}"
     end_date: "{{ change_end_date | default(omit) }}"
 
-    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
-    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+    timeout: "{{ servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
 
   register: problem_generate_change_result
   no_log: true
 
 - name: "Atualizar Problem com referência à Change"
   servicenow.itsm.problem:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     state: present
     sys_id: "{{ problem_sys_id }}"
     work_notes: "Change {{ problem_generate_change_result.record.number if problem_generate_change_result is changed else 'N/A' }} gerada para resolver este Problem"

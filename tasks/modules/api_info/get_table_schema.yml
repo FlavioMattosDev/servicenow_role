@@ -10,9 +10,9 @@
 
 - name: "Obter Schema Detalhado da Tabela"
   servicenow.itsm.api_info:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     table: "sys_dictionary"
     query: "name={{ api_table }}^internal_type!=collection"
     sysparm_fields: "element,internal_type,mandatory,max_length,reference,reference_cascade_rule,reference_floats,reference_key,sys_name,column_label,active,choice_table,choices,default_value,help_tag,dependent_on_field,dynamic_ref_qual,function_definition,calculation"
@@ -23,9 +23,9 @@
 
 - name: "Obter Campos de Coleção (se houver)"
   servicenow.itsm.api_info:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     table: "sys_dictionary"
     query: "name={{ api_table }}^internal_type=collection"
     sysparm_fields: "element,internal_type,reference,reference_key"

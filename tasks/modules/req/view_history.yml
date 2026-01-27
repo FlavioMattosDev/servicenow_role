@@ -10,9 +10,9 @@
 
 - name: "Obter histórico do Request - IMPLEMENTAÇÃO REAL"
   servicenow.itsm.api_info:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     table: "sys_history_line"
     query: "tablename=sc_request^documentkey={{ req_sys_id }}"
     sysparm_display_value: "true"
@@ -24,9 +24,9 @@
 
 - name: "Obter histórico de comentários"
   servicenow.itsm.api_info:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     table: "sys_journal_field"
     query: "element_id={{ req_sys_id }}^name=comments"
     sysparm_display_value: "true"

@@ -11,9 +11,9 @@
 
 - name: "Atribuir Requested Item para grupo - IMPLEMENTAÇÃO REAL"
   servicenow.itsm.sc_req_item:
-    instance: "{{ servicenow_creds.servicenow_connection.instance }}"
-    username: "{{ servicenow_creds.servicenow_connection.username }}"
-    password: "{{ servicenow_creds.servicenow_connection.password }}"
+    instance: "{{ servicenow_connection.instance }}"
+    username: "{{ servicenow_connection.username }}"
+    password: "{{ servicenow_connection.password }}"
     state: present
     sys_id: "{{ ritm_sys_id }}"
 
@@ -29,8 +29,8 @@
     # Comentário automático
     work_notes: "{{ ritm_work_notes | default('RITM atribuído para o grupo ' + ritm_assignment_group) }}"
 
-    timeout: "{{ servicenow_creds.servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
-    validate_certs: "{{ servicenow_creds.servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
+    timeout: "{{ servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
+    validate_certs: "{{ servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
 
   register: ritm_assign_group_result
   no_log: true
