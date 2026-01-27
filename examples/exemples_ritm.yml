@@ -1,0 +1,184 @@
+# ============================================================================
+# EXEMPLOS - RITM (REQUESTED ITEM) PLAYBOOKS (PARA USO COM AAP)
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# CENÁRIO DE WORKFLOW REAL (EDA + ROLE)
+# ----------------------------------------------------------------------------
+- name: "Fluxo EDA: Processamento Inicial de RITM"
+  hosts: localhost
+  gather_facts: no
+  vars:
+    target_ritm_sys_id: "{{ ansible_eda.payload.sys_id }}"
+
+  tasks:
+    - name: "Etapa 1: Consultar variáveis do catálogo (Catalog Variables)"
+      include_role:
+        name: servicenow_role
+      vars:
+        servicenow_dispatch_type: ritm
+        servicenow_dispatch_activity: view_catalog_vars
+        ritm_sys_id: "{{ target_ritm_sys_id }}"
+      register: ritm_vars
+
+    - name: "Etapa 2: Atualizar RITM (Status e Notas)"
+      include_role:
+        name: servicenow_role
+      vars:
+        servicenow_dispatch_type: ritm
+        servicenow_dispatch_activity: update
+        ritm_sys_id: "{{ target_ritm_sys_id }}"
+        ritm_new_state: "work_in_progress"
+        ritm_work_notes: "Automação iniciada. Dados extraídos: {{ ritm_vars.records }}"
+
+# ----------------------------------------------------------------------------
+# EXEMPLOS INDIVIDUAIS
+# ----------------------------------------------------------------------------
+
+# 1. create.yml
+- name: "Criar uma nova RITM"
+  hosts: localhost
+  tasks:
+    - include_role:
+        name: servicenow_role
+      vars:
+        servicenow_dispatch_type: ritm
+        servicenow_dispatch_activity: create
+        ritm_short_description: "Upgrade de Memória RAM"
+        ritm_description: "Solicitado 16GB para o host {{ inventory_hostname }}"
+        ritm_request: "REQ0010203"
+
+# 2. update.yml
+- name: "Atualização genérica de campos"
+  hosts: localhost
+  tasks:
+    - include_role:
+        name: servicenow_role
+      vars:
+        servicenow_dispatch_type: ritm
+        servicenow_dispatch_activity: update
+        ritm_sys_id: "sys_id_da_ritm"
+        ritm_short_description: "Título atualizado via Playbook"
+
+# 3. change_status.yml
+- name: "Mudar estado da RITM"
+  hosts: localhost
+  tasks:
+    - include_role:
+        name: servicenow_role
+      vars:
+        servicenow_dispatch_type: ritm
+        servicenow_dispatch_activity: change_status
+        ritm_sys_id: "sys_id_da_ritm"
+        ritm_new_state: "closed_complete"
+
+# 4. assign_user.yml
+- name: "Atribuir RITM a um Analista"
+  hosts: localhost
+  tasks:
+    - include_role:
+        name: servicenow_role
+      vars:
+        servicenow_dispatch_type: ritm
+        servicenow_dispatch_activity: assign_user
+        ritm_sys_id: "sys_id_da_ritm"
+        ritm_assigned_to: "analista.ti@empresa.com"
+
+# 5. assign_group.yml
+- name: "Atribuir RITM a um Grupo de Suporte"
+  hosts: localhost
+  tasks:
+    - include_role:
+        name: servicenow_role
+      vars:
+        servicenow_dispatch_type: ritm
+        servicenow_dispatch_activity: assign_group
+        ritm_sys_id: "sys_id_da_ritm"
+        ritm_assignment_group: "Service Desk L2"
+
+# 6. add_comment.yml
+- name: "Adicionar Comentário (Visível ao Cliente)"
+  hosts: localhost
+  tasks:
+    - include_role:
+        name: servicenow_role
+      vars:
+        servicenow_dispatch_type: ritm
+        servicenow_dispatch_activity: add_comment
+        ritm_sys_id: "sys_id_da_ritm"
+        ritm_comments: "Sua solicitação foi aprovada e está em fila de execução."
+
+# 7. add_work_note.yml
+- name: "Adicionar Nota Técnica (Interna)"
+  hosts: localhost
+  tasks:
+    - include_role:
+        name: servicenow_role
+      vars:
+        servicenow_dispatch_type: ritm
+        servicenow_dispatch_activity: add_work_note
+        ritm_sys_id: "sys_id_da_ritm"
+        ritm_work_notes: "Script de validação de quota finalizado com sucesso."
+
+# 8. attach_file.yml
+- name: "Anexar arquivo à RITM"
+  hosts: localhost
+  tasks:
+    - include_role:
+        name: servicenow_role
+      vars:
+        servicenow_dispatch_type: ritm
+        servicenow_dispatch_activity: attach_file
+        ritm_sys_id: "sys_id_da_ritm"
+        attachment_path: "/tmp/evidencia.png"
+        attachment_name: "print_erro_resolvido.png"
+
+# 9. relate_to_req.yml
+- name: "Vincular a uma Requisição Pai (REQ)"
+  hosts: localhost
+  tasks:
+    - include_role:
+        name: servicenow_role
+      vars:
+        servicenow_dispatch_type: ritm
+        servicenow_dispatch_activity: relate_to_req
+        ritm_sys_id: "sys_id_da_ritm"
+        req_sys_id: "sys_id_da_req"
+
+# 10. view_catalog_vars.yml
+- name: "Consultar variáveis do catálogo"
+  hosts: localhost
+  tasks:
+    - include_role:
+        name: servicenow_role
+      vars:
+        servicenow_dispatch_type: ritm
+        servicenow_dispatch_activity: view_catalog_vars
+        ritm_sys_id: "sys_id_da_ritm"
+      register: variables_output
+
+# 11. generate_sc_task.yml
+- name: "Gerar SC_TASK a partir da RITM"
+  hosts: localhost
+  tasks:
+    - include_role:
+        name: servicenow_role
+      vars:
+        servicenow_dispatch_type: ritm
+        servicenow_dispatch_activity: generate_sc_task
+        ritm_sys_id: "sys_id_da_ritm"
+        sc_task_short_description: "Tarefa de configuração de switch"
+
+# 12. other_fields.yml
+- name: "Atualizar campos customizados (U_FIELDS)"
+  hosts: localhost
+  tasks:
+    - include_role:
+        name: servicenow_role
+      vars:
+        servicenow_dispatch_type: ritm
+        servicenow_dispatch_activity: other_fields
+        ritm_sys_id: "sys_id_da_ritm"
+        ritm_other_data:
+          u_centro_custo: "FIN-001"
+          u_sistema_impactado: "ERP-Sirius"
