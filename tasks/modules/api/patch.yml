@@ -1,0 +1,24 @@
+---
+- name: "API: Validar campos obrigatórios para PATCH"
+  ansible.builtin.assert:
+    that:
+      - snow_data.resource is defined
+      - snow_data.resource | length > 0
+      - snow_data.sys_id is defined
+      - snow_data.sys_id | length > 0
+      - snow_data.data is defined
+    fail_msg: "ERRO: Para PATCH são obrigatórios 'resource', 'sys_id' (registo alvo) e 'data' (campos a atualizar)."
+
+- name: "API: Atualizar registo genérico (PATCH)"
+  servicenow.itsm.api:
+    instance: "{{ snow_connection_args.instance }}"
+    resource: "{{ snow_data.resource }}"
+    sys_id: "{{ snow_data.sys_id }}"
+    action: "patch"
+    data: "{{ snow_data.data }}"
+  register: result_api_patch
+
+- name: "API: Debug PATCH"
+  ansible.builtin.debug:
+    msg: "Registo {{ snow_data.sys_id }} em '{{ snow_data.resource }}' atualizado com sucesso."
+  when: result_api_patch is defined

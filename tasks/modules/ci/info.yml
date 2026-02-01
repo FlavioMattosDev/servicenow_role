@@ -1,0 +1,26 @@
+---
+- name: "CI: Consultar Configuration Items"
+  servicenow.itsm.configuration_item_info:
+    instance: "{{ snow_connection_args.instance }}"
+
+    # Identificadores
+    name: "{{ snow_data.name | default(omit) }}"
+    sys_id: "{{ snow_data.sys_id | default(omit) }}"
+
+    # Query Avançada (Ex: 'category=Hardware^operational_status=Operational')
+    sysparm_query: "{{ snow_data.query | default(omit) }}"
+
+    # Limitar campos retornados (performance)
+    return_fields: "{{ snow_data.return_fields | default(omit) }}"
+
+    # Formatação de Resposta
+    sysparm_display_value: "{{ snow_data.display_value | default('false') }}"
+
+  register: result_ci_info
+
+- name: "CI: Debug Resultado"
+  ansible.builtin.debug:
+    msg:
+      - "Configuration Items encontrados: {{ result_ci_info.records | length }}"
+      - "Amostra: {{ result_ci_info.records[0] if result_ci_info.records | length > 0 else 'Nenhum' }}"
+  when: result_ci_info.records is defined

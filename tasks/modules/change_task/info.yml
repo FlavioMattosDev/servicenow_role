@@ -1,0 +1,23 @@
+---
+- name: "CTASK: Consultar Change Request Tasks"
+  servicenow.itsm.change_request_task_info:
+    instance: "{{ snow_connection_args.instance }}"
+
+    # Identificadores
+    number: "{{ snow_data.number | default(omit) }}"
+    sys_id: "{{ snow_data.sys_id | default(omit) }}"
+
+    # Query Avançada (Ex: 'change_request.number=CHG0000001^stateNOT IN4,6')
+    sysparm_query: "{{ snow_data.query | default(omit) }}"
+
+    # Formatação de Resposta
+    sysparm_display_value: "{{ snow_data.display_value | default('false') }}"
+
+  register: result_ctask_info
+
+- name: "CTASK: Debug Resultado"
+  ansible.builtin.debug:
+    msg:
+      - "Change Tasks encontradas: {{ result_ctask_info.records | length }}"
+      - "Primeira Task: {{ result_ctask_info.records[0].number | default('N/A') }}"
+  when: result_ctask_info.records is defined

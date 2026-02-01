@@ -1,0 +1,68 @@
+---
+- name: "Change: Validar identificadores para Atualização"
+  ansible.builtin.assert:
+    that:
+      - (snow_data.number is defined and snow_data.number | length > 0) or
+        (snow_data.sys_id is defined and snow_data.sys_id | length > 0)
+    fail_msg: >-
+      ERRO: Não foi possível identificar a Change Request.
+      Informe 'number' (ex: CHG0000001) ou 'sys_id'.
+
+# Tradução de estado numérico para string (compatibilidade com EDA e payloads genéricos).
+# Estados padrão do módulo: new, assess, authorize, scheduled, implement, review, closed, canceled
+- name: "Change: Resolver estado para envio"
+  ansible.builtin.set_fact:
+    change_state_resolved: >-
+      {{
+        {
+          '1': 'new',
+          '2': 'assess',
+          '3': 'authorize',
+          '4': 'scheduled',
+          '5': 'implement',
+          '6': 'review',
+          '7': 'closed',
+          '8': 'canceled'
+        }[snow_data.state | string] | default(snow_data.state)
+      }}
+  when: snow_data.state is defined
+
+- name: "Change: Atualizar/Fechar Change Request"
+  servicenow.itsm.change_request:
+    instance: "{{ snow_connection_args.instance }}"
+
+    # Identificação
+    number: "{{ snow_data.number | default(omit) }}"
+    sys_id: "{{ snow_data.sys_id | default(omit) }}"
+
+    # Estado (usa valor resolvido se disponível)
+    state: "{{ change_state_resolved | default(omit) }}"
+
+    # Campos de fechamento (obrigatórios quando state=closed)
+    close_code: "{{ snow_data.close_code | default(omit) }}"
+    close_notes: "{{ snow_data.close_notes | default(omit) }}"
+
+    # Classificação
+    priority: "{{ snow_data.priority | default(omit) }}"
+    risk: "{{ snow_data.risk | default(omit) }}"
+    impact: "{{ snow_data.impact | default(omit) }}"
+
+    # Atribuição (obrigatório para estados: assess, authorize, scheduled, implement, review, closed)
+    assignment_group: "{{ snow_data.assignment_group | default(omit) }}"
+
+    # On Hold
+    on_hold: "{{ snow_data.on_hold | default(omit) }}"
+    hold_reason: "{{ snow_data.hold_reason | default(omit) }}"
+
+    # Campos adicionais
+    other:
+      work_notes: "{{ snow_data.work_notes | default(omit) }}"
+      comments: "{{ snow_data.comments | default(omit) }}"
+      cmdb_ci: "{{ snow_data.cmdb_ci | default(omit) }}"
+
+  register: result_change_update
+
+- name: "Change: Debug Atualização"
+  ansible.builtin.debug:
+    msg: "Change Request {{ result_change_update.record.number }} atualizada. Estado atual: {{ result_change_update.record.state }}"
+  when: result_change_update.record is defined

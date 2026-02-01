@@ -1,0 +1,101 @@
+---
+- name: Documentação - Guia Completo de Change Request
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    role_name: servicenowteste_role
+    target_change: "CHG0000001"
+
+  tasks:
+    # =========================================================================
+    # CENÁRIO 1: CRIAR CHANGE REQUEST
+    # =========================================================================
+    - name: "1. Criar Change Request"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: change
+        snow_action: create
+        snow_data:
+          short_description: "Atualização do firmware do Switch Core"
+          description: "Aplicar firmware v2.4.1 no Switch Core do Data Center 01."
+          type: "normal"                    # normal, standard, emergency
+          priority: "moderate"             # critical, high, moderate, low
+          risk: "low"                      # high, moderate, low
+          impact: "low"                    # high, medium, low
+          urgency: "low"
+          category: "network"              # hardware, software, service, network, etc.
+          requested_by: "joseflavio@3coracoes.com.br"
+          assignment_group: "DEVOPS"
+          business_service: "Network Infrastructure"
+          cmdb_ci: "SW-CORE-01"
+          work_notes: "Change criada via automação Ansible."
+
+    - name: "1.1. Output: Número da Change criada"
+      ansible.builtin.debug:
+        msg: "Change Request criada: {{ result_change_create.record.number }}"
+
+    # =========================================================================
+    # CENÁRIO 2: CONSULTAR CHANGE REQUESTS
+    # =========================================================================
+    - name: "2. Consultar Change Request específica"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: change
+        snow_action: info
+        snow_data:
+          number: "{{ target_change }}"
+          display_value: "true"
+
+    # =========================================================================
+    # CENÁRIO 3: AVANÇAR ESTADO (Assess → Authorize → Scheduled → Implement)
+    # Nota: assignment_group é obrigatório para transições de estado.
+    # =========================================================================
+    - name: "3. Avançar para Assess"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: change
+        snow_action: update
+        snow_data:
+          number: "{{ target_change }}"
+          state: "assess"                  # ou usar numérico: "2"
+          assignment_group: "DEVOPS"
+          work_notes: "Fase de avaliação iniciada."
+
+    # =========================================================================
+    # CENÁRIO 4: FECHAR CHANGE REQUEST
+    # =========================================================================
+    - name: "4. Fechar Change Request"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: change
+        snow_action: update
+        snow_data:
+          number: "{{ target_change }}"
+          state: "closed"                  # ou usar numérico: "7"
+          assignment_group: "DEVOPS"       # obrigatório para estado closed
+          close_code: "successful"
+          close_notes: "Firmware aplicado com sucesso. Sem impacto."
+          comments: "Change concluída com sucesso."
+
+    # =========================================================================
+    # CENÁRIO 5: COLOCAR EM ON HOLD
+    # =========================================================================
+    - name: "5. Colocar Change em On Hold"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: change
+        snow_action: update
+        snow_data:
+          number: "{{ target_change }}"
+          state: "implement"
+          assignment_group: "DEVOPS"
+          on_hold: true
+          hold_reason: "Aguardar aprovação do CAB"
+          work_notes: "Change em hold por aprovação pendente."

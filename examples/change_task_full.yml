@@ -1,0 +1,79 @@
+---
+- name: Documentação - Guia Completo de Change Request Tasks
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    role_name: servicenowteste_role
+    target_change: "CHG0000001"
+    target_ctask: "CTASK0000001"
+
+  tasks:
+    # =========================================================================
+    # CENÁRIO 1: CRIAR CHANGE TASK
+    # =========================================================================
+    - name: "1. Criar Change Task"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: change_task
+        snow_action: create
+        snow_data:
+          change_request_number: "{{ target_change }}"
+          short_description: "Instalar firmware v2.4.1"
+          description: "Aplicar atualização no módulo de firewall do Switch Core."
+          type: "planning"                 # planning, implementation, testing
+          state: "open"
+          assigned_to: "joseflavio@3coracoes.com.br"
+          assignment_group: "DEVOPS"
+          configuration_item: "SW-CORE-01"
+          planned_start_date: "2024-03-15 08:00:00"
+          planned_end_date: "2024-03-15 18:00:00"
+          work_notes: "Task criada via automação."
+
+    # =========================================================================
+    # CENÁRIO 2: CONSULTAR TASKS DE UMA CHANGE (Descoberta)
+    # =========================================================================
+    - name: "2. Buscar Tasks abertas de uma Change"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: change_task
+        snow_action: info
+        snow_data:
+          # Tasks da Change que NÃO estão fechadas ou canceladas
+          query: "change_request.number={{ target_change }}^stateNOT IN4,6"
+          display_value: "false"
+
+    # =========================================================================
+    # CENÁRIO 3: INICIAR ATENDIMENTO
+    # =========================================================================
+    - name: "3. Assumir a Task (Em Progresso)"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: change_task
+        snow_action: update
+        snow_data:
+          number: "{{ target_ctask }}"
+          state: "in_progress"             # ou usar numérico: "2"
+          assigned_to: "joseflavio@3coracoes.com.br"
+          assignment_group: "DEVOPS"
+          work_notes: "Execução iniciada pela automação Ansible."
+
+    # =========================================================================
+    # CENÁRIO 4: ENCERRAR TASK
+    # =========================================================================
+    - name: "4. Fechar Change Task"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: change_task
+        snow_action: update
+        snow_data:
+          number: "{{ target_ctask }}"
+          state: "closed"                  # ou usar numérico: "4"
+          close_code: "successful"
+          close_notes: "Firmware aplicado sem erros."
+          comments: "Task concluída com sucesso."

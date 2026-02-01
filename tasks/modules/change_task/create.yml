@@ -1,0 +1,51 @@
+---
+- name: "CTASK: Validar campos obrigatórios para Criação"
+  ansible.builtin.assert:
+    that:
+      - snow_data.short_description is defined
+      - snow_data.short_description | length > 0
+      - (snow_data.change_request_number is defined) or (snow_data.change_request_sys_id is defined)
+    fail_msg: >-
+      ERRO: Para criar uma Change Task são obrigatórios:
+      'short_description' e um identificador da Change Request pai ('change_request_number' ou 'change_request_sys_id').
+
+- name: "CTASK: Criar Change Request Task"
+  servicenow.itsm.change_request_task:
+    instance: "{{ snow_connection_args.instance }}"
+
+    state: "{{ snow_data.state | default('open') }}"
+    type: "{{ snow_data.type | default('planning') }}"
+
+    # Relação com a Change Request pai
+    change_request_number: "{{ snow_data.change_request_number | default(omit) }}"
+    change_request_sys_id: "{{ snow_data.change_request_sys_id | default(omit) }}"
+
+    # Descrição
+    short_description: "{{ snow_data.short_description }}"
+    description: "{{ snow_data.description | default(omit) }}"
+
+    # Atribuição
+    assigned_to: "{{ snow_data.assigned_to | default(omit) }}"
+    assignment_group: "{{ snow_data.assignment_group | default(omit) }}"
+
+    # Configuração Item
+    configuration_item: "{{ snow_data.configuration_item | default(omit) }}"
+
+    # Planejamento
+    planned_start_date: "{{ snow_data.planned_start_date | default(omit) }}"
+    planned_end_date: "{{ snow_data.planned_end_date | default(omit) }}"
+
+    # On Hold
+    on_hold: "{{ snow_data.on_hold | default(omit) }}"
+    hold_reason: "{{ snow_data.hold_reason | default(omit) }}"
+
+    # Campos adicionais
+    other:
+      work_notes: "{{ snow_data.work_notes | default(omit) }}"
+
+  register: result_ctask_create
+
+- name: "CTASK: Debug Criação"
+  ansible.builtin.debug:
+    msg: "Change Task criada: {{ result_ctask_create.record.number }} ({{ result_ctask_create.record.sys_id }})"
+  when: result_ctask_create.record is defined

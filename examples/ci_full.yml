@@ -1,0 +1,82 @@
+---
+- name: Documentação - Guia Completo de Configuration Items (CMDB)
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    role_name: servicenowteste_role
+
+  tasks:
+    # =========================================================================
+    # CENÁRIO 1: REGISTAR NOVO CI (Servidor)
+    # =========================================================================
+    - name: "1. Registar Servidor no CMDB"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: ci
+        snow_action: create
+        snow_data:
+          name: "SRV-APP-PORTAL-01"
+          sys_class_name: "cmdb_ci_vm_instance"  # Classe específica para VMs
+          category: "Servers"
+          environment: "production"
+          operational_status: "Operational"
+          install_status: "Installed"
+          ip_address: "10.0.1.55"
+          fqdn: "srv-app-portal-01.3coracoes.com.br"
+          mac_address: "00:1B:44:11:3A:B8"
+          company: "3 Corações"
+          location: "Data Center - Matriz"
+          owned_by: "ti@3coracoes.com.br"
+          managed_by: "DEVOPS"
+          support_group: "Service Desk"
+          work_notes: "CI registado via automação Ansible após deploy."
+
+    # =========================================================================
+    # CENÁRIO 2: CONSULTAR CI POR NOME
+    # =========================================================================
+    - name: "2. Consultar CI por nome"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: ci
+        snow_action: info
+        snow_data:
+          name: "SRV-APP-PORTAL-01"
+          display_value: "true"
+
+    # =========================================================================
+    # CENÁRIO 3: CONSULTAR CIs POR QUERY
+    # =========================================================================
+    - name: "3. Consultar todos os CIs do ambiente Production"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: ci
+        snow_action: info
+        snow_data:
+          query: "environment=production^category=Servers"
+          # Limitar campos retornados para performance
+          return_fields:
+            - name
+            - sys_id
+            - ip_address
+            - operational_status
+
+    # =========================================================================
+    # CENÁRIO 4: ATUALIZAR STATUS DO CI (Idempotente)
+    # Se o CI já existe, atualiza. Se não existe, cria.
+    # =========================================================================
+    - name: "4. Atualizar CI existente"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: ci
+        snow_action: create  # 'create' com state=present é idempotente
+        snow_data:
+          name: "SRV-APP-PORTAL-01"
+          operational_status: "In maintenance"
+          install_status: "In maintenance"
+          work_notes: "Manutenção programada 2024-03-15. Atualizado via Ansible."

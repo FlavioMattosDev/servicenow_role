@@ -1,0 +1,48 @@
+---
+- name: "CI: Validar campos obrigatórios para Criação"
+  ansible.builtin.assert:
+    that:
+      - snow_data.name is defined
+      - snow_data.name | length > 0
+    fail_msg: "ERRO: O campo 'name' é obrigatório para criar/atualizar um Configuration Item."
+
+- name: "CI: Criar ou Atualizar Configuration Item"
+  servicenow.itsm.configuration_item:
+    instance: "{{ snow_connection_args.instance }}"
+
+    # Identificação (state=present é idempotente: cria se não existe, atualiza se existe)
+    state: present
+    name: "{{ snow_data.name }}"
+    sys_id: "{{ snow_data.sys_id | default(omit) }}"
+
+    # Classe do CI no CMDB (ex: cmdb_ci_vm_instance, cmdb_ci_server, cmdb_ci_appl)
+    # Se omitido, usa o padrão 'cmdb_ci'
+    sys_class_name: "{{ snow_data.sys_class_name | default(omit) }}"
+
+    # Classificação
+    category: "{{ snow_data.category | default(omit) }}"
+    environment: "{{ snow_data.environment | default(omit) }}"
+    functional_status: "{{ snow_data.functional_status | default(omit) }}"
+    operational_status: "{{ snow_data.operational_status | default(omit) }}"
+    install_status: "{{ snow_data.install_status | default(omit) }}"
+
+    # Rede
+    ip_address: "{{ snow_data.ip_address | default(omit) }}"
+    mac_address: "{{ snow_data.mac_address | default(omit) }}"
+    fqdn: "{{ snow_data.fqdn | default(omit) }}"
+
+    # Campos adicionais
+    other:
+      company: "{{ snow_data.company | default(omit) }}"
+      location: "{{ snow_data.location | default(omit) }}"
+      owned_by: "{{ snow_data.owned_by | default(omit) }}"
+      managed_by: "{{ snow_data.managed_by | default(omit) }}"
+      support_group: "{{ snow_data.support_group | default(omit) }}"
+      work_notes: "{{ snow_data.work_notes | default(omit) }}"
+
+  register: result_ci_create
+
+- name: "CI: Debug Criação/Atualização"
+  ansible.builtin.debug:
+    msg: "Configuration Item '{{ result_ci_create.record.name }}' → sys_id: {{ result_ci_create.record.sys_id }} | Status: {{ result_ci_create.record.install_status | default('N/A') }}"
+  when: result_ci_create.record is defined

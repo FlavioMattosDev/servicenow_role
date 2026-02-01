@@ -1,0 +1,60 @@
+---
+- name: "Problem: Validar identificadores para Atualização"
+  ansible.builtin.assert:
+    that:
+      - (snow_data.number is defined and snow_data.number | length > 0) or
+        (snow_data.sys_id is defined and snow_data.sys_id | length > 0)
+    fail_msg: >-
+      ERRO: Não foi possível identificar o Problem.
+      Informe 'number' (ex: PRB0000001) ou 'sys_id'.
+
+# Tradução de estado numérico para string.
+# Estados padrão do módulo problem: new, assess, under_investigation, resolved, closed, absent
+- name: "Problem: Resolver estado para envio"
+  ansible.builtin.set_fact:
+    problem_state_resolved: >-
+      {{
+        {
+          '1': 'new',
+          '2': 'assess',
+          '3': 'under_investigation',
+          '4': 'resolved',
+          '5': 'closed'
+        }[snow_data.state | string] | default(snow_data.state)
+      }}
+  when: snow_data.state is defined
+
+- name: "Problem: Atualizar/Resolver Problem"
+  servicenow.itsm.problem:
+    instance: "{{ snow_connection_args.instance }}"
+
+    # Identificação
+    number: "{{ snow_data.number | default(omit) }}"
+    sys_id: "{{ snow_data.sys_id | default(omit) }}"
+
+    # Estado
+    state: "{{ problem_state_resolved | default(omit) }}"
+
+    # Classificação
+    impact: "{{ snow_data.impact | default(omit) }}"
+    urgency: "{{ snow_data.urgency | default(omit) }}"
+    priority: "{{ snow_data.priority | default(omit) }}"
+
+    # Atribuição (obrigatório para todos os estados exceto 'new')
+    assigned_to: "{{ snow_data.assigned_to | default(omit) }}"
+    assignment_group: "{{ snow_data.assignment_group | default(omit) }}"
+
+    # Campos adicionais
+    other:
+      cmdb_ci: "{{ snow_data.cmdb_ci | default(omit) }}"
+      work_notes: "{{ snow_data.work_notes | default(omit) }}"
+      comments: "{{ snow_data.comments | default(omit) }}"
+      known_error: "{{ snow_data.known_error | default(omit) }}"
+      fix_notes: "{{ snow_data.fix_notes | default(omit) }}"
+
+  register: result_problem_update
+
+- name: "Problem: Debug Atualização"
+  ansible.builtin.debug:
+    msg: "Problem {{ result_problem_update.record.number }} atualizado. Estado atual: {{ result_problem_update.record.state }}"
+  when: result_problem_update.record is defined

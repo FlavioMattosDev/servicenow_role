@@ -1,0 +1,93 @@
+---
+- name: Documentação - Guia Completo de Problem Tasks
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    role_name: servicenowteste_role
+    target_problem: "PRB0000001"
+    target_ptask: "PTASK0010005"
+
+  tasks:
+    # =========================================================================
+    # CENÁRIO 1: CRIAR PROBLEM TASK (Investigação Geral)
+    # =========================================================================
+    - name: "1. Criar Problem Task - Investigação"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: problem_task
+        snow_action: create
+        snow_data:
+          source_problem: "{{ target_problem }}"
+          short_description: "Analisar logs do servidor de aplicação"
+          description: "Revisar logs dos últimos 7 dias para identificar padrão de erros."
+          type: "general"                  # general = tarefa genérica
+          priority: "high"
+          assigned_to: "joseflavio@3coracoes.com.br"
+          assignment_group: "DEVOPS"
+          cmdb_ci: "APP-PORTAL-01"
+          work_notes: "Task de investigação criada via automação."
+
+    # =========================================================================
+    # CENÁRIO 2: CRIAR PROBLEM TASK (Análise de Causa Raiz - RCA)
+    # =========================================================================
+    - name: "2. Criar Problem Task - RCA"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: problem_task
+        snow_action: create
+        snow_data:
+          source_problem: "{{ target_problem }}"
+          short_description: "RCA - Determinar causa raiz da lentidão"
+          description: "Conduzir análise formal de causa raiz seguindo metodologia ITIL."
+          type: "rca"                      # rca = Root Cause Analysis
+          priority: "high"
+          assigned_to: "joseflavio@3coracoes.com.br"
+          assignment_group: "DEVOPS"
+
+    # =========================================================================
+    # CENÁRIO 3: CONSULTAR TASKS DE UM PROBLEM
+    # =========================================================================
+    - name: "3. Buscar Problem Tasks abertas"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: problem_task
+        snow_action: info
+        snow_data:
+          query: "problem.number={{ target_problem }}^stateNOT IN4"
+          display_value: "false"
+
+    # =========================================================================
+    # CENÁRIO 4: AVANÇAR TASK (Work In Progress)
+    # =========================================================================
+    - name: "4. Iniciar Atendimento da Task"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: problem_task
+        snow_action: update
+        snow_data:
+          number: "{{ target_ptask }}"
+          state: "work_in_progress"        # ou usar numérico: "3"
+          assigned_to: "joseflavio@3coracoes.com.br"
+          work_notes: "Análise de logs iniciada."
+
+    # =========================================================================
+    # CENÁRIO 5: FECHAR TASK
+    # =========================================================================
+    - name: "5. Fechar Problem Task"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: problem_task
+        snow_action: update
+        snow_data:
+          number: "{{ target_ptask }}"
+          state: "closed"                  # ou usar numérico: "4"
+          close_code: "successful"
+          close_notes: "Análise concluída. Causa identificada: pool de conexões insuficiente."
+          comments: "Task encerrada com resultados da investigação."

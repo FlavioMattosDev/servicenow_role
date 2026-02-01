@@ -1,0 +1,23 @@
+---
+- name: "PTASK: Consultar Problem Tasks"
+  servicenow.itsm.problem_task_info:
+    instance: "{{ snow_connection_args.instance }}"
+
+    # Identificadores
+    number: "{{ snow_data.number | default(omit) }}"
+    sys_id: "{{ snow_data.sys_id | default(omit) }}"
+
+    # Query Avançada (Ex: 'problem.number=PRB0000001^state=new')
+    sysparm_query: "{{ snow_data.query | default(omit) }}"
+
+    # Formatação de Resposta
+    sysparm_display_value: "{{ snow_data.display_value | default('false') }}"
+
+  register: result_ptask_info
+
+- name: "PTASK: Debug Resultado"
+  ansible.builtin.debug:
+    msg:
+      - "Problem Tasks encontradas: {{ result_ptask_info.records | length }}"
+      - "Primeira Task: {{ result_ptask_info.records[0].number | default('N/A') }}"
+  when: result_ptask_info.records is defined

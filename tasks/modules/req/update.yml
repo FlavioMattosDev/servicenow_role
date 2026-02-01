@@ -29,3 +29,8 @@
       work_notes: "{{ snow_data.work_notes | default(omit) }}"
 
   register: result_req_update
+
+- name: "REQ: Debug Atualização"
+  ansible.builtin.debug:
+    msg: "Request {{ result_req_update.record.number }} atualizado com sucesso. Estado: {{ result_req_update.record.state | default('N/A') }}"
+  when: result_req_update.record is defined

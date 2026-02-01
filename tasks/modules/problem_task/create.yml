@@ -1,0 +1,47 @@
+---
+- name: "PTASK: Validar campos obrigatórios para Criação"
+  ansible.builtin.assert:
+    that:
+      - snow_data.short_description is defined
+      - snow_data.short_description | length > 0
+      - snow_data.source_problem is defined
+      - snow_data.source_problem | length > 0
+    fail_msg: >-
+      ERRO: Para criar uma Problem Task são obrigatórios:
+      'short_description' e 'source_problem' (número do Problem pai, ex: PRB0000001).
+
+- name: "PTASK: Criar Problem Task"
+  servicenow.itsm.problem_task:
+    instance: "{{ snow_connection_args.instance }}"
+
+    state: "{{ snow_data.state | default('new') }}"
+    # Tipo: 'general' para tarefas genéricas, 'rca' para análise de causa raiz
+    type: "{{ snow_data.type | default('general') }}"
+
+    # Relação com o Problem pai
+    source_problem: "{{ snow_data.source_problem }}"
+
+    # Descrição
+    short_description: "{{ snow_data.short_description }}"
+    description: "{{ snow_data.description | default(omit) }}"
+
+    # Classificação
+    priority: "{{ snow_data.priority | default(omit) }}"
+
+    # Atribuição
+    assigned_to: "{{ snow_data.assigned_to | default(omit) }}"
+    assignment_group: "{{ snow_data.assignment_group | default(omit) }}"
+
+    # Configuração Item
+    cmdb_ci: "{{ snow_data.cmdb_ci | default(omit) }}"
+
+    # Campos adicionais
+    other:
+      work_notes: "{{ snow_data.work_notes | default(omit) }}"
+
+  register: result_ptask_create
+
+- name: "PTASK: Debug Criação"
+  ansible.builtin.debug:
+    msg: "Problem Task criada: {{ result_ptask_create.record.number }} ({{ result_ptask_create.record.sys_id }})"
+  when: result_ptask_create.record is defined

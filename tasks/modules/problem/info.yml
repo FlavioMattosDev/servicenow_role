@@ -1,0 +1,23 @@
+---
+- name: "Problem: Consultar Problems"
+  servicenow.itsm.problem_info:
+    instance: "{{ snow_connection_args.instance }}"
+
+    # Identificadores
+    number: "{{ snow_data.number | default(omit) }}"
+    sys_id: "{{ snow_data.sys_id | default(omit) }}"
+
+    # Query Avançada (Ex: 'state=new^assigned_to=abel.tuter')
+    sysparm_query: "{{ snow_data.query | default(omit) }}"
+
+    # Formatação de Resposta
+    sysparm_display_value: "{{ snow_data.display_value | default('false') }}"
+
+  register: result_problem_info
+
+- name: "Problem: Debug Resultado"
+  ansible.builtin.debug:
+    msg:
+      - "Problems encontrados: {{ result_problem_info.records | length }}"
+      - "Amostra: {{ result_problem_info.records[0] if result_problem_info.records | length > 0 else 'Nenhum' }}"
+  when: result_problem_info.records is defined

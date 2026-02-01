@@ -1,0 +1,38 @@
+---
+- name: "Problem: Validar campos obrigatórios para Criação"
+  ansible.builtin.assert:
+    that:
+      - snow_data.short_description is defined
+      - snow_data.short_description | length > 0
+    fail_msg: "ERRO: O campo 'short_description' é obrigatório para criar um Problem."
+
+- name: "Problem: Criar novo problema"
+  servicenow.itsm.problem:
+    instance: "{{ snow_connection_args.instance }}"
+
+    state: new
+    short_description: "{{ snow_data.short_description }}"
+    description: "{{ snow_data.description | default(omit) }}"
+
+    # Classificação
+    impact: "{{ snow_data.impact | default(omit) }}"
+    urgency: "{{ snow_data.urgency | default(omit) }}"
+    priority: "{{ snow_data.priority | default(omit) }}"
+
+    # Atribuição (obrigatório para todos os estados exceto 'new')
+    assigned_to: "{{ snow_data.assigned_to | default(omit) }}"
+    assignment_group: "{{ snow_data.assignment_group | default(omit) }}"
+
+    # Campos adicionais
+    other:
+      cmdb_ci: "{{ snow_data.cmdb_ci | default(omit) }}"
+      work_notes: "{{ snow_data.work_notes | default(omit) }}"
+      comments: "{{ snow_data.comments | default(omit) }}"
+      known_error: "{{ snow_data.known_error | default(omit) }}"
+
+  register: result_problem_create
+
+- name: "Problem: Debug Criação"
+  ansible.builtin.debug:
+    msg: "Problem criado: {{ result_problem_create.record.number }} ({{ result_problem_create.record.sys_id }})"
+  when: result_problem_create.record is defined

@@ -1,0 +1,71 @@
+---
+- name: Documentação - Guia Completo de API Genérica
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    role_name: servicenowteste_role
+
+  tasks:
+    # =========================================================================
+    # CENÁRIO 1: CONSULTA GENÉRICA (GET) - Qualquer tabela
+    # =========================================================================
+    - name: "1. Consulta genérica - Buscar usuários por nome"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: api_info
+        snow_action: get
+        snow_data:
+          resource: "sys_user"
+          query: "nameLIKEjose"
+          columns: "name,user_name,email,sys_id"
+          display_value: "true"
+
+    # =========================================================================
+    # CENÁRIO 2: CRIAR REGISTO GENÉRICO (POST) - Tabela customizada
+    # =========================================================================
+    - name: "2. Criar registo numa tabela customizada"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: api
+        snow_action: post
+        snow_data:
+          resource: "u_automation_log"     # Tabela customizada
+          data:
+            u_timestamp: "2024-03-15 10:00:00"
+            u_source: "Ansible"
+            u_status: "success"
+            u_message: "Deploy concluído com sucesso."
+            u_ci: "SRV-APP-PORTAL-01"
+
+    # =========================================================================
+    # CENÁRIO 3: ATUALIZAR REGISTO GENÉRICO (PATCH)
+    # =========================================================================
+    - name: "3. Atualizar registo numa tabela customizada"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: api
+        snow_action: patch
+        snow_data:
+          resource: "u_automation_log"
+          sys_id: "abc123def456"           # sys_id do registo a atualizar
+          data:
+            u_status: "completed"
+            u_message: "Execução finalizada. Duração: 45s."
+
+    # =========================================================================
+    # CENÁRIO 4: ELIMINAR REGISTO GENÉRICO (DELETE)
+    # =========================================================================
+    - name: "4. Eliminar registo"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: api
+        snow_action: delete
+        snow_data:
+          resource: "u_automation_log"
+          sys_id: "abc123def456"

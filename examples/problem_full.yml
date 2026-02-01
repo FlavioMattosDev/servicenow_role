@@ -1,0 +1,98 @@
+---
+- name: Documentação - Guia Completo de Problem Management
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    role_name: servicenowteste_role
+    target_problem: "PRB0000001"
+
+  tasks:
+    # =========================================================================
+    # CENÁRIO 1: CRIAR PROBLEM (a partir de incidente recorrente)
+    # =========================================================================
+    - name: "1. Criar Problem"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: problem
+        snow_action: create
+        snow_data:
+          short_description: "Lentidão recorrente no módulo de login do portal"
+          description: "Incidentes INC001, INC002 e INC003 reportam lentidão no login. Padrão sugere problema estrutural."
+          impact: "high"
+          urgency: "high"
+          priority: "high"
+          assigned_to: "joseflavio@3coracoes.com.br"
+          assignment_group: "DEVOPS"
+          cmdb_ci: "APP-PORTAL-01"
+          known_error: "false"
+          work_notes: "Problem criado automaticamente pela correlação de incidentes."
+
+    - name: "1.1. Output: Número do Problem criado"
+      ansible.builtin.debug:
+        msg: "Problem criado: {{ result_problem_create.record.number }}"
+
+    # =========================================================================
+    # CENÁRIO 2: CONSULTAR PROBLEMS
+    # =========================================================================
+    - name: "2. Consultar Problem específico"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: problem
+        snow_action: info
+        snow_data:
+          number: "{{ target_problem }}"
+          display_value: "true"
+
+    # =========================================================================
+    # CENÁRIO 3: AVANÇAR PARA INVESTIGAÇÃO
+    # =========================================================================
+    - name: "3. Iniciar Investigação"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: problem
+        snow_action: update
+        snow_data:
+          number: "{{ target_problem }}"
+          state: "under_investigation"     # ou usar numérico: "3"
+          assigned_to: "joseflavio@3coracoes.com.br"
+          assignment_group: "DEVOPS"
+          work_notes: "Investigação iniciada. Análise de logs em andamento."
+
+    # =========================================================================
+    # CENÁRIO 4: MARCAR COMO KNOWN ERROR
+    # =========================================================================
+    - name: "4. Registar Known Error"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: problem
+        snow_action: update
+        snow_data:
+          number: "{{ target_problem }}"
+          state: "under_investigation"
+          assigned_to: "joseflavio@3coracoes.com.br"
+          known_error: "true"
+          fix_notes: "Workaround: limpar cache do browser resolve temporariamente."
+          work_notes: "Known Error registado. Fix permanente em desenvolvimento."
+
+    # =========================================================================
+    # CENÁRIO 5: RESOLVER PROBLEM
+    # =========================================================================
+    - name: "5. Resolver Problem"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: problem
+        snow_action: update
+        snow_data:
+          number: "{{ target_problem }}"
+          state: "resolved"                # ou usar numérico: "4"
+          assigned_to: "joseflavio@3coracoes.com.br"
+          fix_notes: "Pool de conexões expandido de 50 para 200. Deploy v2.1.0 aplicado."
+          work_notes: "Problema resolvido após deploy. Monitorização ativa por 48h."
+          comments: "O problema foi resolvido. Os incidentes relacionados serão fechados em breve."

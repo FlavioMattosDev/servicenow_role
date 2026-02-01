@@ -1,0 +1,22 @@
+---
+- name: "API: Validar campos obrigatórios para DELETE"
+  ansible.builtin.assert:
+    that:
+      - snow_data.resource is defined
+      - snow_data.resource | length > 0
+      - snow_data.sys_id is defined
+      - snow_data.sys_id | length > 0
+    fail_msg: "ERRO: Para DELETE são obrigatórios 'resource' e 'sys_id' do registo a eliminar."
+
+- name: "API: Eliminar registo genérico (DELETE)"
+  servicenow.itsm.api:
+    instance: "{{ snow_connection_args.instance }}"
+    resource: "{{ snow_data.resource }}"
+    sys_id: "{{ snow_data.sys_id }}"
+    action: "delete"
+  register: result_api_delete
+
+- name: "API: Debug DELETE"
+  ansible.builtin.debug:
+    msg: "Registo {{ snow_data.sys_id }} eliminado da tabela '{{ snow_data.resource }}'."
+  when: result_api_delete is defined

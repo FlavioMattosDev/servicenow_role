@@ -1,4 +1,11 @@
 ---
+- name: "API: Validar campo obrigatório 'resource'"
+  ansible.builtin.assert:
+    that:
+      - snow_data.resource is defined
+      - snow_data.resource | length > 0
+    fail_msg: "ERRO: O campo 'resource' é obrigatório para consulta genérica via API. Ex: 'incident', 'sc_req_item', 'cmdb_ci'."
+
 - name: "API: Consulta Genérica (GET)"
   servicenow.itsm.api_info:
     instance: "{{ snow_connection_args.instance }}"

@@ -1,0 +1,61 @@
+---
+- name: "CTASK: Validar identificadores para Atualização"
+  ansible.builtin.assert:
+    that:
+      - (snow_data.number is defined and snow_data.number | length > 0) or
+        (snow_data.sys_id is defined and snow_data.sys_id | length > 0)
+    fail_msg: "ERRO: Informe 'number' (ex: CTASK0000001) ou 'sys_id' da Change Task."
+
+# Tradução de estado numérico para string.
+# Estados padrão: open, in_progress, pending, closed, canceled
+- name: "CTASK: Resolver estado para envio"
+  ansible.builtin.set_fact:
+    ctask_state_resolved: >-
+      {{
+        {
+          '1': 'open',
+          '2': 'in_progress',
+          '3': 'pending',
+          '4': 'closed',
+          '6': 'canceled'
+        }[snow_data.state | string] | default(snow_data.state)
+      }}
+  when: snow_data.state is defined
+
+- name: "CTASK: Atualizar/Fechar Change Task"
+  servicenow.itsm.change_request_task:
+    instance: "{{ snow_connection_args.instance }}"
+
+    # Identificação
+    number: "{{ snow_data.number | default(omit) }}"
+    sys_id: "{{ snow_data.sys_id | default(omit) }}"
+
+    # Estado
+    state: "{{ ctask_state_resolved | default(omit) }}"
+
+    # Campos de fechamento (obrigatórios quando state=closed)
+    close_code: "{{ snow_data.close_code | default(omit) }}"
+    close_notes: "{{ snow_data.close_notes | default(omit) }}"
+
+    # Atribuição
+    assigned_to: "{{ snow_data.assigned_to | default(omit) }}"
+    assignment_group: "{{ snow_data.assignment_group | default(omit) }}"
+
+    # Configuração Item
+    configuration_item: "{{ snow_data.configuration_item | default(omit) }}"
+
+    # On Hold
+    on_hold: "{{ snow_data.on_hold | default(omit) }}"
+    hold_reason: "{{ snow_data.hold_reason | default(omit) }}"
+
+    # Campos adicionais
+    other:
+      work_notes: "{{ snow_data.work_notes | default(omit) }}"
+      comments: "{{ snow_data.comments | default(omit) }}"
+
+  register: result_ctask_update
+
+- name: "CTASK: Debug Atualização"
+  ansible.builtin.debug:
+    msg: "Change Task {{ result_ctask_update.record.number }} atualizada. Estado atual: {{ result_ctask_update.record.state }}"
+  when: result_ctask_update.record is defined

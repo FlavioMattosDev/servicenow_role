@@ -1,0 +1,23 @@
+---
+- name: "Change: Consultar Change Requests"
+  servicenow.itsm.change_request_info:
+    instance: "{{ snow_connection_args.instance }}"
+
+    # Identificadores
+    number: "{{ snow_data.number | default(omit) }}"
+    sys_id: "{{ snow_data.sys_id | default(omit) }}"
+
+    # Query Avançada (Ex: 'state=new^assignment_group=DEVOPS')
+    sysparm_query: "{{ snow_data.query | default(omit) }}"
+
+    # Formatação de Resposta
+    sysparm_display_value: "{{ snow_data.display_value | default('false') }}"
+
+  register: result_change_info
+
+- name: "Change: Debug Resultado"
+  ansible.builtin.debug:
+    msg:
+      - "Change Requests encontrados: {{ result_change_info.records | length }}"
+      - "Amostra: {{ result_change_info.records[0] if result_change_info.records | length > 0 else 'Nenhum' }}"
+  when: result_change_info.records is defined

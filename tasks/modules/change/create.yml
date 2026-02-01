@@ -1,16 +1,41 @@
 ---
+- name: "Change: Validar campos obrigatórios para Criação"
+  ansible.builtin.assert:
+    that:
+      - snow_data.short_description is defined
+      - snow_data.short_description | length > 0
+    fail_msg: "ERRO: O campo 'short_description' é obrigatório para criar uma Change Request."
+
 - name: "Change: Criar solicitação de mudança"
   servicenow.itsm.change_request:
     instance: "{{ snow_connection_args.instance }}"
-    username: "{{ snow_connection_args.username }}"
-    password: "{{ snow_connection_args.password }}"
-    validate_certs: "{{ snow_connection_args.validate_certs }}"
 
     state: new
     type: "{{ snow_data.type | default('normal') }}"
-    short_description: "{{ snow_data.short_description | default('Change Request via Ansible') }}"
+    short_description: "{{ snow_data.short_description }}"
     description: "{{ snow_data.description | default(omit) }}"
+
+    # Classificação
     priority: "{{ snow_data.priority | default(omit) }}"
     risk: "{{ snow_data.risk | default(omit) }}"
+    impact: "{{ snow_data.impact | default(omit) }}"
+    urgency: "{{ snow_data.urgency | default(omit) }}"
+    category: "{{ snow_data.category | default(omit) }}"
+
+    # Atribuição
     requested_by: "{{ snow_data.requested_by | default(omit) }}"
+    assignment_group: "{{ snow_data.assignment_group | default(omit) }}"
+
+    # Campos adicionais
+    other:
+      business_service: "{{ snow_data.business_service | default(omit) }}"
+      cmdb_ci: "{{ snow_data.cmdb_ci | default(omit) }}"
+      work_notes: "{{ snow_data.work_notes | default(omit) }}"
+      comments: "{{ snow_data.comments | default(omit) }}"
+
   register: result_change_create
+
+- name: "Change: Debug Criação"
+  ansible.builtin.debug:
+    msg: "Change Request criada: {{ result_change_create.record.number }} ({{ result_change_create.record.sys_id }})"
+  when: result_change_create.record is defined

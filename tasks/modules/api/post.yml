@@ -1,0 +1,21 @@
+---
+- name: "API: Validar campos obrigatórios para POST"
+  ansible.builtin.assert:
+    that:
+      - snow_data.resource is defined
+      - snow_data.resource | length > 0
+      - snow_data.data is defined
+    fail_msg: "ERRO: Para POST são obrigatórios 'resource' (tabela alvo) e 'data' (payload do novo registo)."
+
+- name: "API: Criar registo genérico (POST)"
+  servicenow.itsm.api:
+    instance: "{{ snow_connection_args.instance }}"
+    resource: "{{ snow_data.resource }}"
+    action: "post"
+    data: "{{ snow_data.data }}"
+  register: result_api_post
+
+- name: "API: Debug POST"
+  ansible.builtin.debug:
+    msg: "Registo criado em '{{ snow_data.resource }}' → sys_id: {{ result_api_post.record.sys_id | default('N/A') }}"
+  when: result_api_post.record is defined

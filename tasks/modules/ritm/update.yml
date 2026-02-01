@@ -1,4 +1,11 @@
 ---
+- name: "RITM: Validar Identificador"
+  ansible.builtin.assert:
+    that:
+      - (snow_data.number is defined and snow_data.number | length > 0) or
+        (snow_data.sys_id is defined and snow_data.sys_id | length > 0)
+    fail_msg: "ERRO: Informe 'number' ou 'sys_id' para atualizar o RITM."
+
 - name: "RITM: Buscar Sys_ID pelo Número"
   servicenow.itsm.api_info:
     instance: "{{ snow_connection_args.instance }}"
@@ -28,16 +35,18 @@
   ansible.builtin.set_fact:
     ritm_payload: >-
       {{
-        {
-          'state': snow_data.state | default(omit),
-          'short_description': snow_data.short_description | default(omit),
-          'description': snow_data.description | default(omit),
-          'priority': snow_data.priority | default(omit),
-          'assignment_group': snow_data.assignment_group | default(omit),
-          'assigned_to': snow_data.assigned_to | default(omit),
-          'work_notes': snow_data.work_notes | default(omit),
-          'comments': snow_data.comments | default(omit),
-        } | dict2items | rejectattr('value', 'undefined') | list | items2dict
+        {}
+        | combine( {'state': snow_data.state} if snow_data.state is defined else {} )
+        | combine( {'short_description': snow_data.short_description} if snow_data.short_description is defined else {} )
+        | combine( {'description': snow_data.description} if snow_data.description is defined else {} )
+        | combine( {'priority': snow_data.priority} if snow_data.priority is defined else {} )
+        | combine( {'assignment_group': snow_data.assignment_group} if snow_data.assignment_group is defined else {} )
+        | combine( {'assigned_to': snow_data.assigned_to} if snow_data.assigned_to is defined else {} )
+        | combine( {'requested_for': snow_data.requested_for} if snow_data.requested_for is defined else {} )
+        | combine( {'watch_list': snow_data.watch_list} if snow_data.watch_list is defined else {} )
+        | combine( {'work_notes': snow_data.work_notes} if snow_data.work_notes is defined else {} )
+        | combine( {'comments': snow_data.comments} if snow_data.comments is defined else {} )
+        | combine( {'close_notes': snow_data.close_notes} if snow_data.close_notes is defined else {} )
       }}
 
 - name: "RITM: Executar Atualização (PATCH sc_req_item)"
@@ -49,6 +58,7 @@
     data: "{{ ritm_payload }}"
   register: result_ritm_update
 
-- name: "RITM: Debug Resultado"
+- name: "RITM: Debug Atualização"
   ansible.builtin.debug:
-    msg: "RITM {{ snow_data.number }} atualizado com sucesso."
+    msg: "RITM {{ snow_data.number | default(ritm_target_id) }} atualizado com sucesso."
+  when: result_ritm_update is defined
