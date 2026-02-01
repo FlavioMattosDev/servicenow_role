@@ -1,51 +1,31 @@
-# tasks/modules/req/update.yml
 ---
-# Atualizar Request
-
-- name: "Validar parâmetros para atualizar Request"
-  assert:
+- name: "REQ: Validar Identificador"
+  ansible.builtin.assert:
     that:
-      - req_sys_id is defined
-    fail_msg: "req_sys_id é obrigatório para atualizar Request"
+      - (snow_data.number is defined) or (snow_data.sys_id is defined)
+    fail_msg: "ERRO: Informe 'number' ou 'sys_id' para atualizar o Request."
 
-- name: "Atualizar Request - IMPLEMENTAÇÃO REAL"
-  servicenow.itsm.sc_request:
-    instance: "{{ servicenow_connection.instance }}"
-    username: "{{ servicenow_connection.username }}"
-    password: "{{ servicenow_connection.password }}"
-    state: present
-    sys_id: "{{ req_sys_id }}"
+- name: "REQ: Atualizar Request"
+  servicenow.itsm.catalog_request:
+    instance: "{{ snow_connection_args.instance }}"
 
-    # Campos atualizáveis
-    short_description: "{{ req_short_description | default(omit) }}"
-    description: "{{ req_description | default(omit) }}"
-    stage: "{{ req_stage | default(omit) }}"
-    state: "{{ req_state | default(omit) }}"
+    # Identificação
+    number: "{{ snow_data.number | default(omit) }}"
+    sys_id: "{{ snow_data.sys_id | default(omit) }}"
 
-    # Urgência e impacto
-    urgency: "{{ req_urgency | default(omit) }}"
-    impact: "{{ req_impact | default(omit) }}"
+    # Campos Principais
+    state: "{{ snow_data.state | default(omit) }}"
+    assignment_group: "{{ snow_data.assignment_group | default(omit) }}"
+    assigned_to: "{{ snow_data.assigned_to | default(omit) }}"
+    short_description: "{{ snow_data.short_description | default(omit) }}"
+    description: "{{ snow_data.description | default(omit) }}"
 
-    # Categoria
-    category: "{{ req_category | default(omit) }}"
-    subcategory: "{{ req_subcategory | default(omit) }}"
+    # Campos Adicionais
+    other:
+      request_state: "{{ snow_data.request_state | default(omit) }}"
+      stage: "{{ snow_data.stage | default(omit) }}"
+      special_instructions: "{{ snow_data.special_instructions | default(omit) }}"
+      comments: "{{ snow_data.comments | default(omit) }}"
+      work_notes: "{{ snow_data.work_notes | default(omit) }}"
 
-    # Solicitação por
-    requested_by: "{{ req_requested_by | default(omit) }}"
-    requested_for: "{{ req_requested_for | default(omit) }}"
-
-    # Configurações de aprovação
-    approval: "{{ req_approval | default(omit) }}"
-
-    timeout: "{{ servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
-    validate_certs: "{{ servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
-
-  register: req_update_result
-  no_log: true
-
-- name: "Exibir resultado da atualização"
-  debug:
-    msg: |
-      Request {{ req_sys_id }} atualizado
-      Alterado: {{ req_update_result is changed }}
-  changed_when: req_update_result is changed
+  register: result_req_update

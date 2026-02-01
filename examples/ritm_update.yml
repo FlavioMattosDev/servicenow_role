@@ -1,0 +1,64 @@
+---
+- name: Documentação - Exemplo Completo de RITM (Service Catalog)
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    role_name: servicenowteste_role
+    target_ritm: "RITM0016644"
+
+  tasks:
+    - name: "CENÁRIO 1: Atualizar todos os campos disponíveis"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: ritm
+        snow_action: update
+        snow_data:
+          # --- Identificação (Obrigatório) ---
+          number: "{{ target_ritm }}"
+
+          # --- Fluxo de Trabalho ---
+          state: "2" # 1=Open, 2=Work in Progress, 3=Closed Complete, 4=Closed Incomplete
+          priority: "2" # 1=Critical, 2=High, 3=Moderate, 4=Low
+
+          # --- Atribuição ---
+          assignment_group: "DEVOPS" # Nome exato do grupo
+          assigned_to: "joseflavio@3coracoes.com.br" # E-mail ou User ID
+          requested_for: "a4d29ddf3be6261045aa3747f4e45a49" # (Opcional) SysID do solicitante se precisar alterar
+
+          # --- Detalhes e Descrição ---
+          short_description: "Acesso Visitante - Em Processamento Automático"
+          description: "Descrição atualizada via Ansible com detalhes da execução."
+
+          # --- Notificações ---
+          watch_list: "gestor.ti@3coracoes.com.br, coordenador@3coracoes.com.br"
+
+          # --- Comunicação Interna ---
+          work_notes: |
+            [Ansible Automation]
+            - Ticket assumido.
+            - Prioridade ajustada para High.
+            - Unidade definida para Matriz.
+
+    - name: "CENÁRIO 2: Encerrar RITM"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: ritm
+        snow_action: update
+        snow_data:
+          number: "{{ target_ritm }}"
+
+          # Mudar para Fechado/Completo
+          state: "3"
+
+          # --- Notas de Fechamento (Técnico) ---
+          close_notes: "Automação executada com sucesso. Vouchers gerados e enviados."
+
+          # --- Comentário Público (Visível ao Cliente) ---
+          comments: |
+            Olá,
+            Sua solicitação foi concluída!
+            Por favor, valide o recebimento dos vouchers no seu e-mail.

@@ -1,0 +1,17 @@
+---
+- name: "API: Consulta Genérica (GET)"
+  servicenow.itsm.api_info:
+    instance: "{{ snow_connection_args.instance }}"
+    resource: "{{ snow_data.resource }}"
+    sysparm_query: "{{ snow_data.query | default(omit) }}"
+    columns: "{{ snow_data.columns | default(omit) }}"
+    display_value: "{{ snow_data.display_value | default(omit) }}"
+  register: result_api_info
+
+- name: "API: Debug Resultado"
+  ansible.builtin.debug:
+    msg:
+      - "Status da execução: Sucesso"
+      - "Registos retornados: {{ result_api_info.record | length }}"
+      - "Amostra (Primeiro Registo): {{ result_api_info.record | first if (result_api_info.record | length > 0) else 'Nenhum registo encontrado' }}"
+  when: result_api_info.record is defined

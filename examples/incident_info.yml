@@ -1,0 +1,32 @@
+---
+- name: Exemplo - Consultar Incidente
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    role_name: servicenowteste_role
+    target_inc: "INC0014696"
+
+  tasks:
+    - name: "Buscar dados do Incidente"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: incident
+        snow_action: info
+        snow_data:
+          # ---------------------------------------------------------
+          # FILTROS (Pelo menos um é recomendado)
+          # ---------------------------------------------------------
+          number: "{{ target_inc }}"
+          # sys_id: "..."
+          # query: "active=true^urgency=1"  <-- Busca avançada (retorna lista)
+
+    - name: "Output: Exibir dados recuperados"
+      ansible.builtin.debug:
+        msg:
+          - "Status atual: {{ result_incident_info.records[0].state }}"
+          - "Aberto por: {{ result_incident_info.records[0].opened_by }}"
+          - "Descrição: {{ result_incident_info.records[0].short_description }}"
+      when: result_incident_info.records | length > 0

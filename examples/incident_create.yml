@@ -1,0 +1,66 @@
+---
+- name: Exemplo - Criar Incidente ServiceNow
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    role_name: servicenowteste_role
+
+  tasks:
+    - name: "Criar Incidente (Full Payload)"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: incident
+        snow_action: create
+        snow_data:
+          # ---------------------------------------------------------
+          # CAMPOS OBRIGATÓRIOS (Validado pelo assert da role)
+          # ---------------------------------------------------------
+          # E-mail ou User ID do solicitante
+          caller_id: "joseflavio@3coracoes.com.br"
+
+          # Nome exato do Serviço de Negócio (ou Sys_ID)
+          business_service: "SAP ERP"
+
+          # Nome exato da Oferta de Serviço (ou Sys_ID)
+          service_offering: "SAP Production"
+
+          # Categoria (valor interno/minúsculo, ex: software, hardware)
+          category: "software"
+
+          # Grupo de Atribuição inicial (Nome exato ou Sys_ID)
+          assignment_group: "Service Desk"
+
+          # Resumo curto do problema
+          short_description: "Erro ao acessar transação Z123 no SAP"
+
+          # ---------------------------------------------------------
+          # CAMPOS OPCIONAIS (Recomendados)
+          # ---------------------------------------------------------
+          # Detalhes técnicos ou passo-a-passo
+          description: "Usuário relata lentidão e time-out após clicar em salvar."
+
+          # 1=High, 2=Medium, 3=Low
+          impact: "2"
+          urgency: "2"
+
+          # Subcategoria (depende da categoria escolhida)
+          subcategory: "database"
+
+          # Tipo de contato (email, phone, walk-in, self-service)
+          contact_type: "email"
+
+          # Item de Configuração afetado (Nome do Server/App)
+          cmdb_ci: "SRV-SAP-01"
+
+          # Lista de e-mails para acompanhar o chamado (separados por vírgula)
+          watch_list: "gestor.area@3coracoes.com.br, coordenador@3coracoes.com.br"
+
+          # Nota interna (visível apenas para analistas)
+          work_notes: "Incidente aberto via automação Ansible."
+
+    - name: "Output: Exibir número do incidente criado"
+      ansible.builtin.debug:
+        msg: "Incidente criado com sucesso: {{ result_incident_create.record.number }}"

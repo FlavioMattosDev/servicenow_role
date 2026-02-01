@@ -1,72 +1,38 @@
-# tasks/modules/incident/create.yml
 ---
-# Criar Incidente
-
-- name: "Validar parâmetros para criar incidente"
-  assert:
+- name: "Incident: Validar campos obrigatórios para Criação"
+  ansible.builtin.assert:
     that:
-      - incident_short_description is defined
-    fail_msg: "incident_short_description é obrigatório para criar incidente"
+      - snow_data.caller_id is defined
+      - snow_data.business_service is defined
+      - snow_data.service_offering is defined
+      - snow_data.category is defined
+      - snow_data.short_description is defined
+      - snow_data.assignment_group is defined
+    fail_msg: "ERRO: Faltam campos obrigatórios! Verifique: caller_id, business_service, service_offering, category, short_description, assignment_group."
 
-- name: "Criar Incidente - IMPLEMENTAÇÃO REAL"
+- name: "Incident: Criar novo incidente (Campos Obrigatórios)"
   servicenow.itsm.incident:
-    instance: "{{ servicenow_connection.instance }}"
-    username: "{{ servicenow_connection.username }}"
-    password: "{{ servicenow_connection.password }}"
-    state: present
+    instance: "{{ snow_connection_args.instance }}"
+    state: new
+    caller: "{{ snow_data.caller_id }}"
+    short_description: "{{ snow_data.short_description }}"
+    impact: "{{ snow_data.impact | default(omit) | string }}"
+    urgency: "{{ snow_data.urgency | default(omit) | string }}"
+    description: "{{ snow_data.description | default(omit) }}"
 
-    # Campos obrigatórios
-    short_description: "{{ incident_short_description }}"
+    other:
+      business_service: "{{ snow_data.business_service }}"
+      service_offering: "{{ snow_data.service_offering }}"
+      category: "{{ snow_data.category }}"
+      assignment_group: "{{ snow_data.assignment_group }}"
+      subcategory: "{{ snow_data.subcategory | default(omit) }}"
+      contact_type: "{{ snow_data.contact_type | default(omit) }}"
+      cmdb_ci: "{{ snow_data.cmdb_ci | default(omit) }}"
+      watch_list: "{{ snow_data.watch_list | default(omit) }}"
+      work_notes: "{{ snow_data.work_notes | default(omit) }}"
 
-    # Campos opcionais
-    description: "{{ incident_description | default('') }}"
-    caller_id: "{{ incident_caller | default(omit) }}"
-    contact_type: "{{ incident_contact_type | default('email') }}"
+  register: result_incident_create
 
-    # Impacto, urgência e prioridade
-    impact: "{{ incident_impact | default(3) }}"
-    urgency: "{{ incident_urgency | default(3) }}"
-    priority: "{{ incident_priority | default(3) }}"
-
-    # Categorização
-    category: "{{ incident_category | default(omit) }}"
-    subcategory: "{{ incident_subcategory | default(omit) }}"
-
-    # Atribuição inicial
-    assignment_group: "{{ incident_assignment_group | default(omit) }}"
-    assigned_to: "{{ incident_assigned_to | default(omit) }}"
-
-    # Configuração Item
-    cmdb_ci: "{{ incident_cmdb_ci | default(omit) }}"
-
-    # Estado inicial
-    state: "{{ incident_state | default(1) }}"
-
-    # Comentários iniciais
-    comments: "{{ incident_comments | default('Incidente criado via Ansible') }}"
-    work_notes: "{{ incident_work_notes | default('') }}"
-
-    # Campos de negócio
-    business_service: "{{ incident_business_service | default(omit) }}"
-
-    timeout: "{{ servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
-    validate_certs: "{{ servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
-
-  register: incident_create_result
-  no_log: true
-
-- name: "Registrar SYS_ID do incidente criado"
-  set_fact:
-    created_incident_sys_id: "{{ incident_create_result.record.sys_id }}"
-    created_incident_number: "{{ incident_create_result.record.number }}"
-  when: incident_create_result is changed
-
-- name: "Exibir resultado da criação"
-  debug:
-    msg: |
-      Incidente criado com sucesso!
-      Número: {{ incident_create_result.record.number }}
-      SYS_ID: {{ incident_create_result.record.sys_id }}
-      Prioridade: {{ incident_create_result.record.priority }}
-      Estado: {{ incident_create_result.record.state }}
-  when: incident_create_result is changed
+- name: "Incident: Debug Criação"
+  ansible.builtin.debug:
+    msg: "Incidente criado: {{ result_incident_create.record.number }} ({{ result_incident_create.record.sys_id }})"

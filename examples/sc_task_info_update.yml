@@ -1,0 +1,113 @@
+---
+- name: Documentação - Guia Completo de SCTASK (Catalog Task)
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    role_name: servicenowteste_role
+
+    # Variáveis de Exemplo (Para rodar o teste)
+    target_ritm: "RITM0016644" # O "Pai" da tarefa
+    target_sctask: "SCTASK0016800" # A tarefa específica (se já souber)
+
+  tasks:
+    # =========================================================================
+    # CENÁRIO 1: DESCOBERTA (Tenho o RITM, preciso da TASK)
+    # Muito comum em fluxos do EDA onde o evento traz apenas o RITM.
+    # =========================================================================
+    - name: "1. Buscar SCTASKs abertas de um RITM"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: sc_task
+        snow_action: info
+        snow_data:
+          # Query: Tarefas deste RITM que NÃO estão fechadas (state != 3, 4, 7)
+          query: "request_item.number={{ target_ritm }}^stateNOT IN3,4,7"
+          display_value: "false"
+
+    - name: "1.1. Debug - Mostrar tarefas encontradas"
+      ansible.builtin.debug:
+        msg: "Encontrei a tarefa: {{ result_sctask_info.records[0].number }}"
+      when: result_sctask_info.records | length > 0
+
+    # =========================================================================
+    # CENÁRIO 2: CONSULTA DIRETA (Tenho o número da SCTASK)
+    # =========================================================================
+    - name: "2. Consultar detalhes de uma SCTASK específica"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: sc_task
+        snow_action: info
+        snow_data:
+          number: "{{ target_sctask }}"
+          # display_value: 'true' traz os nomes (ex: grupo DEVOPS) em vez de SysIDs
+          display_value: "true"
+
+    # =========================================================================
+    # CENÁRIO 3: INICIAR ATENDIMENTO (Work In Progress)
+    # Atualiza status, atribuição e campos customizados.
+    # =========================================================================
+    - name: "3. Assumir a tarefa (Em Progresso)"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: sc_task
+        snow_action: update
+        snow_data:
+          number: "{{ target_sctask }}"
+
+          # --- Status (Numérico) ---
+          # A role traduz automaticamente: 2 -> 'work_in_progress'
+          state: "2"
+
+          # --- Atribuição ---
+          assignment_group: "DEVOPS"
+          assigned_to: "joseflavio@3coracoes.com.br"
+
+          # --- Campos Customizados (Hidden/Other) ---
+          u_tcor_substatus: "Em Analise Tecnica"
+
+          # --- Notas ---
+          work_notes: "Ansible assumiu a execução desta tarefa."
+
+    # =========================================================================
+    # CENÁRIO 4: ENCERRAR COM SUCESSO (Closed Complete)
+    # O fluxo padrão de automação bem-sucedida.
+    # =========================================================================
+    - name: "4. Finalizar Tarefa (Sucesso)"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: sc_task
+        snow_action: update
+        snow_data:
+          number: "{{ target_sctask }}"
+
+          # --- Status (Numérico) ---
+          # A role traduz automaticamente: 3 -> 'closed_complete'
+          state: "3"
+
+          # --- Fechamento ---
+          close_code: "Solved (Permanently)" # Se o formulário exigir
+          close_notes: "Execução automatizada concluída com sucesso."
+          comments: "Sua solicitação técnica foi realizada."
+
+    # =========================================================================
+    # CENÁRIO 5: ENCERRAR COMO IGNORADO/FALHA (Closed Skipped / Incomplete)
+    # Use quando a automação falha ou não se aplica.
+    # =========================================================================
+    - name: "5. Cancelar Tarefa (Opcional)"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: sc_task
+        snow_action: update
+        snow_data:
+          number: "{{ target_sctask }}"
+          # 4 = Closed Incomplete
+          # 7 = Closed Skipped
+          state: "7"
+          work_notes: "Automação abortada por falta de pré-requisitos."

@@ -1,0 +1,61 @@
+---
+- name: Exemplo - Atualizar/Resolver Incidente
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    role_name: servicenowteste_role
+    # Número do incidente a ser atualizado
+    target_inc: "INC0014696"
+
+  tasks:
+    - name: "Resolver Incidente"
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+      vars:
+        snow_entity: incident
+        snow_action: update
+        snow_data:
+          # ---------------------------------------------------------
+          # IDENTIFICAÇÃO (Obrigatório pelo menos um)
+          # ---------------------------------------------------------
+          number: "{{ target_inc }}"
+          # sys_id: "..."  <-- Alternativa ao number
+
+          # ---------------------------------------------------------
+          # CAMPOS OBRIGATÓRIOS PARA RESOLUÇÃO
+          # ---------------------------------------------------------
+          # Novo estado (6 = Resolved, 7 = Closed - depende da instância)
+          state: "resolved"
+
+          # Código de Fechamento (Valor exato do dropdown)
+          close_code: "Solved (Permanently)"
+
+          # Notas de Fechamento (Solução aplicada)
+          close_notes: "Patch de correção aplicado e serviço reiniciado."
+
+          # Causa Raiz (Valor exato do dropdown)
+          cause: "Software Bug"
+
+          # Quem resolveu (E-mail ou User ID)
+          resolved_by: "ansible_integration_user"
+
+          # ---------------------------------------------------------
+          # CAMPOS OPCIONAIS NA ATUALIZAÇÃO
+          # ---------------------------------------------------------
+          # Reatribuir para outro grupo antes de fechar
+          assignment_group: "N2 Support"
+
+          # Adicionar nota interna
+          work_notes: "Fechamento automático via validação de health check."
+
+          # Adicionar comentário público (visível ao usuário)
+          comments: "Prezado usuário, o serviço foi restabelecido. Por favor, valide."
+
+          # Data da resolução (Opcional, o SNOW preenche automático se omitido)
+          # resolved_at: "2023-10-27 10:00:00"
+
+    - name: "Output: Confirmar status"
+      ansible.builtin.debug:
+        msg: "Incidente {{ target_inc }} atualizado. Novo estado: {{ result_incident_update.record.state }}"

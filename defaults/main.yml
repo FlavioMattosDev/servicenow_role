@@ -1,44 +1,10 @@
-# defaults/main.yml
 ---
-# Configurações padrão para a role ServiceNow ITSM
+# defaults/main.yml
 
-# Conexão ServiceNow - Mapeamento direto das variáveis do AAP
-servicenow_connection:
-  instance: "{{ servicenow_url }}"
-  username: "{{ servicenow_user }}"
-  password: "{{ servicenow_pass }}"
-  timeout: "{{ servicenow_default_timeout | default(30) }}"
-  validate_certs: "{{ servicenow_default_validate_certs | default(true) }}"
-  # Configurações avançadas (opcionais via AAP ou Playbook)
-  oauth:
-    client_id: "{{ servicenow_oauth_client_id | default(omit) }}"
-    client_secret: "{{ servicenow_oauth_client_secret | default(omit) }}"
-    token_url: "{{ servicenow_oauth_token_url | default(omit) }}"
-  proxy:
-    url: "{{ servicenow_proxy_url | default(omit) }}"
-    username: "{{ servicenow_proxy_username | default(omit) }}"
-    password: "{{ servicenow_proxy_password | default(omit) }}"
-
-# Configurações padrão para operações
+# Timeout e Validação SSL padrão
 servicenow_default_timeout: 30
 servicenow_default_validate_certs: true
-servicenow_default_api_path: "api/now"
 
-# Valores padrão para incidentes
-incident_defaults:
-  state: 1 # New
-  severity: 3 # Medium
-  urgency: 3 # Medium
-  impact: 3 # Medium
-  priority: 3 # Medium
-
-# Valores padrão para change requests
-change_request_defaults:
-  state: "new"
-  risk: "low"
-  impact: "low"
-  priority: "3"
-
-# Configurações de logging
-servicenow_log_level: "info"
-servicenow_enable_debug: false
+# Variáveis que controlam o fluxo (devem ser sobrescritas no playbook)
+snow_entity: "" # Ex: incident, change, ritm
+snow_action: "" # Ex: create, update, info, delete

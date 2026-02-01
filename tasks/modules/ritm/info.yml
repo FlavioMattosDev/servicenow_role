@@ -1,0 +1,29 @@
+---
+- name: "RITM: Consultar Dados (API Generic)"
+  servicenow.itsm.api_info:
+    instance: "{{ snow_connection_args.instance }}"
+    resource: "sc_req_item"
+
+    # Query Inteligente
+    sysparm_query: >-
+      {{
+        snow_data.query | default(
+          'number=' ~ snow_data.number if snow_data.number is defined else
+          'sys_id=' ~ snow_data.sys_id if snow_data.sys_id is defined else
+          omit
+        )
+      }}
+
+    display_value: "{{ snow_data.display_value | default('false') }}"
+
+    columns: "{{ snow_data.columns | default(omit) }}"
+
+  register: result_ritm_info
+
+- name: "RITM: Debug Resultado"
+  ansible.builtin.debug:
+    msg:
+      - "Status: Sucesso"
+      - "Dados encontrados: {{ result_ritm_info.record | length }}"
+      - "Amostra: {{ result_ritm_info.record[0] if result_ritm_info.record | length > 0 else 'Nenhum' }}"
+  when: result_ritm_info.record is defined

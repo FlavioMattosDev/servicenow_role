@@ -1,52 +1,54 @@
-# tasks/modules/ritm/update.yml
 ---
-# Atualizar Requested Item
+- name: "RITM: Buscar Sys_ID pelo Número"
+  servicenow.itsm.api_info:
+    instance: "{{ snow_connection_args.instance }}"
+    resource: "sc_req_item"
+    sysparm_query: "number={{ snow_data.number }}"
+    columns: "sys_id"
+  register: ritm_lookup_result
+  when: snow_data.sys_id is not defined and snow_data.number is defined
 
-- name: "Validar parâmetros para atualizar RITM"
-  assert:
-    that:
-      - ritm_sys_id is defined
-    fail_msg: "ritm_sys_id é obrigatório para atualizar RITM"
+- name: "RITM: Definir ID alvo para atualização"
+  ansible.builtin.set_fact:
+    ritm_target_id: >-
+      {{
+        snow_data.sys_id | default(
+          (ritm_lookup_result.record | first).sys_id
+          if (ritm_lookup_result.record is defined and ritm_lookup_result.record | length > 0)
+          else ''
+        )
+      }}
 
-- name: "Atualizar Requested Item - IMPLEMENTAÇÃO REAL"
-  servicenow.itsm.sc_req_item:
-    instance: "{{ servicenow_connection.instance }}"
-    username: "{{ servicenow_connection.username }}"
-    password: "{{ servicenow_connection.password }}"
-    state: present
-    sys_id: "{{ ritm_sys_id }}"
+- name: "RITM: Validar se o ID foi encontrado"
+  ansible.builtin.assert:
+    that: ritm_target_id | length > 0
+    fail_msg: "Não foi possível encontrar o RITM {{ snow_data.number | default('Sem Número') }}. Verifique se o ticket existe."
 
-    # Campos atualizáveis
-    short_description: "{{ ritm_short_description | default(omit) }}"
-    description: "{{ ritm_description | default(omit) }}"
-    stage: "{{ ritm_stage | default(omit) }}"
-    state: "{{ ritm_state | default(omit) }}"
+- name: "RITM: Preparar dados para envio"
+  ansible.builtin.set_fact:
+    ritm_payload: >-
+      {{
+        {
+          'state': snow_data.state | default(omit),
+          'short_description': snow_data.short_description | default(omit),
+          'description': snow_data.description | default(omit),
+          'priority': snow_data.priority | default(omit),
+          'assignment_group': snow_data.assignment_group | default(omit),
+          'assigned_to': snow_data.assigned_to | default(omit),
+          'work_notes': snow_data.work_notes | default(omit),
+          'comments': snow_data.comments | default(omit),
+        } | dict2items | rejectattr('value', 'undefined') | list | items2dict
+      }}
 
-    # Atribuição
-    assignment_group: "{{ ritm_assignment_group | default(omit) }}"
-    assigned_to: "{{ ritm_assigned_to | default(omit) }}"
+- name: "RITM: Executar Atualização (PATCH sc_req_item)"
+  servicenow.itsm.api:
+    instance: "{{ snow_connection_args.instance }}"
+    resource: "sc_req_item"
+    sys_id: "{{ ritm_target_id }}"
+    action: "patch"
+    data: "{{ ritm_payload }}"
+  register: result_ritm_update
 
-    # Quantidade
-    quantity: "{{ ritm_quantity | default(omit) }}"
-
-    # Urgência
-    urgency: "{{ ritm_urgency | default(omit) }}"
-
-    # Variáveis do catálogo
-    variables: "{{ ritm_variables | default({}) }}"
-
-    # Campos de aprovação
-    approval: "{{ ritm_approval | default(omit) }}"
-
-    timeout: "{{ servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
-    validate_certs: "{{ servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
-
-  register: ritm_update_result
-  no_log: true
-
-- name: "Exibir resultado da atualização"
-  debug:
-    msg: |
-      Requested Item {{ ritm_sys_id }} atualizado
-      Alterado: {{ ritm_update_result is changed }}
-  changed_when: ritm_update_result is changed
+- name: "RITM: Debug Resultado"
+  ansible.builtin.debug:
+    msg: "RITM {{ snow_data.number }} atualizado com sucesso."

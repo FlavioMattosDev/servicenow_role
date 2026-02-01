@@ -1,76 +1,16 @@
-# tasks/modules/change/create.yml
 ---
-# Criar Change
-
-- name: "Validar parâmetros para criar change"
-  assert:
-    that:
-      - change_short_description is defined
-    fail_msg: "change_short_description é obrigatório para criar change"
-
-- name: "Criar Change - IMPLEMENTAÇÃO REAL"
+- name: "Change: Criar solicitação de mudança"
   servicenow.itsm.change_request:
-    instance: "{{ servicenow_connection.instance }}"
-    username: "{{ servicenow_connection.username }}"
-    password: "{{ servicenow_connection.password }}"
-    state: present
+    instance: "{{ snow_connection_args.instance }}"
+    username: "{{ snow_connection_args.username }}"
+    password: "{{ snow_connection_args.password }}"
+    validate_certs: "{{ snow_connection_args.validate_certs }}"
 
-    # Campos obrigatórios
-    short_description: "{{ change_short_description }}"
-
-    # Campos opcionais
-    description: "{{ change_description | default('') }}"
-
-    # Tipo de change
-    type: "{{ change_type | default('normal') }}"
-    category: "{{ change_category | default('hardware') }}"
-
-    # Impacto e risco
-    impact: "{{ change_impact | default('low') }}"
-    risk: "{{ change_risk | default('low') }}"
-
-    # Justificativa
-    justification: "{{ change_justification | default('Change necessária para melhoria ou correção') }}"
-
-    # Atribuição inicial
-    assignment_group: "{{ change_assignment_group | default(omit) }}"
-    assigned_to: "{{ change_assigned_to | default(omit) }}"
-
-    # Estado inicial
-    state: "{{ change_state | default('new') }}"
-
-    # Configuração Item relacionado
-    cmdb_ci: "{{ change_cmdb_ci | default(omit) }}"
-
-    # Planejamento inicial
-    start_date: "{{ change_start_date | default(omit) }}"
-    end_date: "{{ change_end_date | default(omit) }}"
-
-    # Comentários iniciais
-    comments: "{{ change_comments | default('Change criada via Ansible') }}"
-    work_notes: "{{ change_work_notes | default('') }}"
-
-    # Aprovações
-    approval: "{{ change_approval | default('not requested') }}"
-
-    timeout: "{{ servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
-    validate_certs: "{{ servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
-
-  register: change_create_result
-  no_log: true
-
-- name: "Registrar SYS_ID da change criada"
-  set_fact:
-    created_change_sys_id: "{{ change_create_result.record.sys_id }}"
-    created_change_number: "{{ change_create_result.record.number }}"
-  when: change_create_result is changed
-
-- name: "Exibir resultado da criação"
-  debug:
-    msg: |
-      Change criada com sucesso!
-      Número: {{ change_create_result.record.number }}
-      SYS_ID: {{ change_create_result.record.sys_id }}
-      Tipo: {{ change_create_result.record.type }}
-      Estado: {{ change_create_result.record.state }}
-  when: change_create_result is changed
+    state: new
+    type: "{{ snow_data.type | default('normal') }}"
+    short_description: "{{ snow_data.short_description | default('Change Request via Ansible') }}"
+    description: "{{ snow_data.description | default(omit) }}"
+    priority: "{{ snow_data.priority | default(omit) }}"
+    risk: "{{ snow_data.risk | default(omit) }}"
+    requested_by: "{{ snow_data.requested_by | default(omit) }}"
+  register: result_change_create

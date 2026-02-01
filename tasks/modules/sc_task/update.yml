@@ -1,54 +1,55 @@
-# tasks/modules/sc_task/update.yml
 ---
-# Atualizar Catalog Task
-
-- name: "Validar parâmetros para atualizar Catalog Task"
-  assert:
+- name: "SCTASK: Validar Identificador"
+  ansible.builtin.assert:
     that:
-      - sc_task_sys_id is defined
-    fail_msg: "sc_task_sys_id é obrigatório para atualizar Catalog Task"
+      - (snow_data.number is defined) or (snow_data.sys_id is defined)
+    fail_msg: "ERRO: Informe 'number' ou 'sys_id' da SCTASK."
 
-- name: "Atualizar Catalog Task - IMPLEMENTAÇÃO REAL"
-  servicenow.itsm.sc_task:
-    instance: "{{ servicenow_connection.instance }}"
-    username: "{{ servicenow_connection.username }}"
-    password: "{{ servicenow_connection.password }}"
+- name: "SCTASK: Atualizar Tarefa"
+  servicenow.itsm.catalog_request_task:
+    instance: "{{ snow_connection_args.instance }}"
+
+    # Identificação
+    number: "{{ snow_data.number | default(omit) }}"
+    sys_id: "{{ snow_data.sys_id | default(omit) }}"
+
+    # State = 'present' garante que o registro existe (não mexe no status)
     state: present
-    sys_id: "{{ sc_task_sys_id }}"
 
-    # Campos atualizáveis
-    short_description: "{{ sc_task_short_description | default(omit) }}"
-    description: "{{ sc_task_description | default(omit) }}"
-    state: "{{ sc_task_state | default(omit) }}"
-    assignment_group: "{{ sc_task_assignment_group | default(omit) }}"
-    assigned_to: "{{ sc_task_assigned_to | default(omit) }}"
+    # --- CORREÇÃO: TRADUTOR DE STATUS ---
+    # O módulo exige strings específicas. Aqui convertemos seus números (1,2,3) para elas.
+    task_state: >-
+      {{
+        {
+          '1': 'open',
+          '2': 'work_in_progress',
+          '3': 'closed_complete',
+          '4': 'closed_incomplete',
+          '7': 'closed_skipped'
+        }[snow_data.state | string] | default(snow_data.state) | default(omit)
+      }}
 
-    # Campos de prioridade
-    priority: "{{ sc_task_priority | default(omit) }}"
+    # Campos Principais
+    short_description: "{{ snow_data.short_description | default(omit) }}"
+    description: "{{ snow_data.description | default(omit) }}"
 
-    # Campos de SLA
-    sla_due: "{{ sc_task_sla_due | default(omit) }}"
+    # Atribuição
+    assignment_group: "{{ snow_data.assignment_group | default(omit) }}"
+    assigned_to: "{{ snow_data.assigned_to | default(omit) }}"
 
-    # Campos de data
-    due_date: "{{ sc_task_due_date | default(omit) }}"
-    closed_at: "{{ sc_task_closed_at | default(omit) }}"
+    # Campos Adicionais e Customizados
+    other:
+      work_notes: "{{ snow_data.work_notes | default(omit) }}"
+      comments: "{{ snow_data.comments | default(omit) }}"
+      u_tcor_substatus: "{{ snow_data.u_tcor_substatus | default(omit) }}"
 
-    # Campos de conclusão
-    close_code: "{{ sc_task_close_code | default(omit) }}"
-    close_notes: "{{ sc_task_close_notes | default(omit) }}"
+      # Campos de fechamento (passados em 'other' se o módulo não tiver nativo)
+      close_notes: "{{ snow_data.close_notes | default(omit) }}"
+      close_code: "{{ snow_data.close_code | default(omit) }}"
 
-    # Outros campos
-    "{{ sc_task_other_fields | default({}) }}"
+  register: result_sctask_update
 
-    timeout: "{{ servicenow_connection.timeout | default(servicenow_globals.servicenow_default_timeout) }}"
-    validate_certs: "{{ servicenow_connection.validate_certs | default(servicenow_globals.servicenow_default_validate_certs) }}"
-
-  register: sc_task_update_result
-  no_log: true
-
-- name: "Exibir resultado da atualização"
-  debug:
-    msg: |
-      Catalog Task {{ sc_task_sys_id }} atualizado
-      Alterado: {{ sc_task_update_result is changed }}
-  changed_when: sc_task_update_result is changed
+- name: "SCTASK: Debug Atualização"
+  ansible.builtin.debug:
+    msg: "Task {{ result_sctask_update.record.number }} atualizada com sucesso."
+  when: result_sctask_update.record is defined

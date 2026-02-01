@@ -1,33 +1,15 @@
-# tasks/main.yml
 ---
-# Ponto de entrada principal da role
+# tasks/main.yml
 
-- name: "Validar parâmetros obrigatórios"
-  assert:
+- name: "Validação: Verificar variáveis obrigatórias"
+  ansible.builtin.assert:
     that:
-      - servicenow_module is defined
-      - servicenow_action is defined
-    success_msg: "Parâmetros validados com sucesso"
-    fail_msg: "Parâmetros obrigatórios não fornecidos: servicenow_module e servicenow_action"
+      - snow_instance is defined
+      - snow_username is defined
+      - snow_password is defined
+      - snow_entity is defined
+      - snow_action is defined
+    fail_msg: "Faltam variáveis obrigatórias para conectar ao ServiceNow ou definir a ação."
 
-- name: "Carregar credenciais do ServiceNow"
-  include_vars:
-    file: "{{ role_path }}/vars/credentials.yml"
-    name: servicenow_creds
-
-- name: "Carregar variáveis globais"
-  include_vars:
-    file: "{{ role_path }}/vars/main.yml"
-    name: servicenow_globals
-
-- name: "Carregar configurações de módulo"
-  include_vars:
-    file: "{{ role_path }}/vars/module_parameters/{{ servicenow_module }}.yml"
-    name: module_params
-  ignore_errors: true
-  when: servicenow_module != 'api_info'
-
-- name: "Executar dispatcher principal"
-  include_tasks: dispatcher/main.yml
-  vars:
-    servicenow_operation: "{{ servicenow_action }}"
+- name: "Dispatcher: Iniciar roteamento de módulo"
+  ansible.builtin.include_tasks: dispatcher/main.yml

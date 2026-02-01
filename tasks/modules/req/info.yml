@@ -1,0 +1,23 @@
+---
+- name: "REQ: Consultar Requests"
+  servicenow.itsm.catalog_request_info:
+    instance: "{{ snow_connection_args.instance }}"
+
+    # Identificadores
+    number: "{{ snow_data.number | default(omit) }}"
+    sys_id: "{{ snow_data.sys_id | default(omit) }}"
+
+    # Busca Avançada (Ex: 'active=true^requested_for=...')
+    sysparm_query: "{{ snow_data.query | default(omit) }}"
+
+    # Formatação (true=Nomes, false=IDs)
+    sysparm_display_value: "{{ snow_data.display_value | default('false') }}"
+
+  register: result_req_info
+
+- name: "REQ: Debug Resultado"
+  ansible.builtin.debug:
+    msg: "REQ encontrado: {{ result_req_info.records[0].number }}"
+  when:
+    - result_req_info.records is defined
+    - result_req_info.records | length > 0

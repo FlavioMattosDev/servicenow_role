@@ -1,0 +1,28 @@
+---
+- name: "Incident: Consultar incidentes"
+  servicenow.itsm.incident_info:
+    instance: "{{ snow_connection_args.instance }}"
+
+    # Filtros de Busca (Pelo menos um deve ser passado preferencialmente)
+    number: "{{ snow_data.number | default(omit) }}"
+    sys_id: "{{ snow_data.sys_id | default(omit) }}"
+
+    # Query Avançada (Ex: 'active=true^urgency=1')
+    # Útil para buscar listas de incidentes baseados em critérios
+    sysparm_query: "{{ snow_data.query | default(omit) }}"
+
+    # Formatação de Resposta (Crucial para automação!)
+    # true: Retorna nomes legíveis (ex: 'SAP ERP')
+    # false: Retorna sys_id (ex: 'a9c3...')
+    # all: Retorna ambos (objeto complexo)
+    sysparm_display_value: "{{ snow_data.display_value | default('false') }}"
+
+  register: result_incident_info
+
+- name: "Incident: Debug Resultado"
+  ansible.builtin.debug:
+    msg:
+      - "Incidentes encontrados: {{ result_incident_info.records | length }}"
+      # Exibe o primeiro registo se existir
+      - "Amostra: {{ result_incident_info.records[0] if result_incident_info.records | length > 0 else 'Nenhum' }}"
+  when: result_incident_info.records is defined

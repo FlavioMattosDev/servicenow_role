@@ -1,9 +1,9 @@
 # meta/main.yml
 ---
 galaxy_info:
-  author: "DevOps Team"
+  author: "Flávio Mattos"
   description: "Role Ansible completa para automação do ServiceNow ITSM"
-  company: "Your Company"
+  company: "3 Corações"
   license: "MIT"
   min_ansible_version: "2.9"
   galaxy_tags:

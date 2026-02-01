@@ -1,0 +1,20 @@
+---
+- name: "SCTASK: Consultar Tarefas"
+  servicenow.itsm.catalog_request_task_info:
+    instance: "{{ snow_connection_args.instance }}"
+
+    number: "{{ snow_data.number | default(omit) }}"
+    sys_id: "{{ snow_data.sys_id | default(omit) }}"
+
+    sysparm_query: "{{ snow_data.query | default(omit) }}"
+
+    sysparm_display_value: "{{ snow_data.display_value | default('false') }}"
+
+  register: result_sctask_info
+
+- name: "SCTASK: Debug Resultado"
+  ansible.builtin.debug:
+    msg:
+      - "Tasks encontradas: {{ result_sctask_info.records | length }}"
+      - "Primeira Task: {{ result_sctask_info.records[0].number | default('N/A') }}"
+  when: result_sctask_info.records is defined
